@@ -1,0 +1,21 @@
+node_modules/
+out/
+dist/
+release/
+.shots/
+*.local
+.env
+.env.*
+!.env.example
+.verify*.mjs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

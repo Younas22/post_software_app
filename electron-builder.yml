@@ -1,0 +1,85 @@
+appId: com.universalpos.desktop
+productName: Universal POS
+copyright: Copyright © 2026 Universal POS SaaS
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+
+# better-sqlite3's compiled .node binary must live outside the asar archive
+# — Node cannot dlopen a native addon from inside an asar file.
+asarUnpack:
+  - '**/*.node'
+  - node_modules/better-sqlite3/**/*
+
+extraResources: []
+
+# Production SQLite/settings/device-registration always live in
+# app.getPath('userData') (see src/main/db/index.ts), never inside the
+# install directory — so NSIS's default per-user install location and
+# uninstall behavior can never touch business data (Phase 14 rule).
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  signAndEditExecutable: false
+
+portable:
+  artifactName: '${productName}-Portable-${version}.${ext}'
+
+nsis:
+  artifactName: '${productName}-Setup-${version}.${ext}'
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Universal POS
+  # Upgrades must preserve an existing install's data — NSIS's default
+  # per-user data dir behavior already satisfies this (see win: comment
+  # above); this only controls the install DIRECTORY itself.
+  deleteAppDataOnUninstall: false
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+  category: public.app-category.business
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  # A real notarization profile (APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD /
+  # APPLE_TEAM_ID, or notarize.teamId here) is required for distribution
+  # outside the Mac App Store — intentionally not configured in this repo;
+  # see docs/FINAL_DEVELOPMENT_REPORT.md for what a real release needs.
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  category: Office
+
+# electron-updater feed — 'generic' points at any static file host serving
+# latest.yml/latest-mac.yml + the installers. Replace with the real update
+# server before shipping; see docs/FINAL_DEVELOPMENT_REPORT.md.
+publish:
+  provider: generic
+  url: https://updates.example-invalid.test/universal-pos-desktop/
+  channel: latest
