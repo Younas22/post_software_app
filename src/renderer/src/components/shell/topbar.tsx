@@ -8,6 +8,7 @@ import { useSyncStore } from '@renderer/lib/stores/syncStore'
 import { useThemeStore, type ThemeChoice } from '@renderer/lib/stores/themeStore'
 import { Dropdown, DropdownItem } from '@renderer/components/ui/dropdown'
 import { IconButton } from '@renderer/components/ui/icon-button'
+import { NotificationsBell } from './notifications-bell'
 
 const THEME_ICONS: Record<ThemeChoice, typeof Sun> = { light: Sun, dark: Moon, system: Monitor }
 
@@ -47,16 +48,17 @@ export function Topbar(): React.JSX.Element {
   const ThemeIcon = THEME_ICONS[theme]
 
   return (
-    <header className="app-drag flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4">
+    <header className="app-drag flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-6">
       <div className="flex items-center gap-3">
-        <span className="text-sm font-semibold">{business?.name ?? 'Universal POS'}</span>
+        <span className="text-[15px] font-semibold">{business?.name ?? 'Universal POS'}</span>
         {branch && (
-          <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground">{branch.name}</span>
+          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{branch.name}</span>
         )}
       </div>
 
-      <div className="app-no-drag flex items-center gap-2">
+      <div className="app-no-drag flex items-center gap-2.5">
         <ConnectionBadge />
+        <NotificationsBell />
 
         <Dropdown
           align="right"

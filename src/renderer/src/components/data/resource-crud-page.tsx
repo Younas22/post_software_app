@@ -6,6 +6,7 @@ import { toast } from '@renderer/lib/stores/toastStore'
 import { Button } from '@renderer/components/ui/button'
 import { IconButton } from '@renderer/components/ui/icon-button'
 import { SearchInput } from '@renderer/components/ui/search-input'
+import { Select } from '@renderer/components/ui/select'
 import { Modal } from '@renderer/components/ui/modal'
 import { ConfirmDialog } from '@renderer/components/ui/confirm-dialog'
 import { EmptyState } from '@renderer/components/ui/empty-state'
@@ -20,6 +21,13 @@ import type { PaginationMeta } from '@shared/types'
 interface ResourceRow {
   id: number
   status?: string
+}
+
+/** A single dropdown filter shown next to the search box — mirrors the web app's FilterSelect/FilterBar pattern (e.g. status, category, branch). */
+export interface FilterConfig {
+  name: string
+  label: string
+  options: Array<{ value: string; label: string }>
 }
 
 interface ResourceCrudPageProps<T extends ResourceRow> {
@@ -38,6 +46,8 @@ interface ResourceCrudPageProps<T extends ResourceRow> {
   searchPlaceholder?: string
   /** Lets a caller inject/adjust fields the visible form doesn't collect (e.g. Employees' business_id — see BACKEND_EXTENSIONS.md bug #1). */
   transformPayload?: (values: FormValues, editing: T | null) => Record<string, unknown>
+  /** Dropdown filters shown next to search — each maps to a `?name=value` query param, matching the equivalent Web POS list page. */
+  filters?: FilterConfig[]
 }
 
 export function ResourceCrudPage<T extends ResourceRow>({
@@ -53,13 +63,15 @@ export function ResourceCrudPage<T extends ResourceRow>({
   canDelete = true,
   activation,
   searchPlaceholder = 'Search...',
-  transformPayload
+  transformPayload,
+  filters
 }: ResourceCrudPageProps<T>): React.JSX.Element {
   const [rows, setRows] = useState<T[]>([])
   const [meta, setMeta] = useState<PaginationMeta | null>(null)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [filterValues, setFilterValues] = useState<Record<string, string>>({})
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<T | null>(null)
@@ -73,7 +85,11 @@ export function ResourceCrudPage<T extends ResourceRow>({
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const { data, meta: pageMeta } = await remote.get<T[]>(path, { search: search || undefined, page })
+      const { data, meta: pageMeta } = await remote.get<T[]>(path, {
+        search: search || undefined,
+        page,
+        ...Object.fromEntries(Object.entries(filterValues).filter(([, v]) => v))
+      })
       setRows(data)
       setMeta(pageMeta ?? null)
     } catch (err) {
@@ -81,7 +97,9 @@ export function ResourceCrudPage<T extends ResourceRow>({
     } finally {
       setLoading(false)
     }
-  }, [path, search, page])
+    // filterValues is a plain object recreated on every filter change, safe to depend on directly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path, search, page, JSON.stringify(filterValues)])
 
   useEffect(() => {
     void load()
@@ -160,7 +178,7 @@ export function ResourceCrudPage<T extends ResourceRow>({
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold">{title}</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
         {canCreate && (
@@ -170,14 +188,34 @@ export function ResourceCrudPage<T extends ResourceRow>({
         )}
       </div>
 
-      <div className="max-w-xs">
-        <SearchInput
-          placeholder={searchPlaceholder}
-          onSearch={(v) => {
-            setSearch(v)
-            setPage(1)
-          }}
-        />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="max-w-xs flex-1">
+          <SearchInput
+            placeholder={searchPlaceholder}
+            onSearch={(v) => {
+              setSearch(v)
+              setPage(1)
+            }}
+          />
+        </div>
+        {filters?.map((filter) => (
+          <Select
+            key={filter.name}
+            className="w-auto"
+            value={filterValues[filter.name] ?? ''}
+            onChange={(e) => {
+              setFilterValues((prev) => ({ ...prev, [filter.name]: e.target.value }))
+              setPage(1)
+            }}
+          >
+            <option value="">{filter.label}: All</option>
+            {filter.options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </Select>
+        ))}
       </div>
 
       {loading ? (

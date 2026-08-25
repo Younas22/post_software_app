@@ -6,6 +6,7 @@ import { EmptyState } from '@renderer/components/ui/empty-state'
 import { formatMoney } from '@renderer/lib/format'
 import { cn } from '@renderer/lib/cn'
 import { toast } from '@renderer/lib/stores/toastStore'
+import { DiscountPopover } from './discount-popover'
 
 interface CartPanelProps {
   selectedProductId: number | null
@@ -16,18 +17,19 @@ interface CartPanelProps {
 }
 
 export function CartPanel({ selectedProductId, onSelectLine, onOpenCustomer, onCheckout, checkoutDisabled }: CartPanelProps): React.JSX.Element {
-  const { lines, customer, updateQuantity, removeLine, subtotal, totalDiscount, totalTax, total } = usePosStore()
+  const { lines, customer, updateQuantity, removeLine, applyDiscountToAll, clear, subtotal, totalDiscount, totalTax, total } = usePosStore()
 
   return (
     <div className="flex h-full flex-col border-l border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <h2 className="flex items-center gap-2 text-sm font-semibold">
-          <ShoppingCart className="size-4" /> Cart
+      <div className="flex h-16 items-center justify-between border-b border-border px-5">
+        <h2 className="flex items-center gap-2 text-base font-semibold">
+          <ShoppingCart className="size-[18px]" /> Cart
+          {lines.length > 0 && <span className="text-sm font-normal text-muted-foreground">({lines.length})</span>}
         </h2>
         <div className="flex items-center gap-1.5">
           <button
             onClick={onOpenCustomer}
-            className="flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-xs font-medium hover:bg-border"
+            className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border"
           >
             <UserRound className="size-3.5" />
             {customer ? customer.name : 'Walk-in (F8)'}
@@ -42,6 +44,14 @@ export function CartPanel({ selectedProductId, onSelectLine, onOpenCustomer, onC
           >
             <Lock className="size-4" />
           </IconButton>
+          {lines.length > 0 && (
+            <>
+              <DiscountPopover onApply={applyDiscountToAll} />
+              <IconButton aria-label="Clear cart" title="Clear cart" onClick={clear}>
+                <Trash2 className="size-4 text-error" />
+              </IconButton>
+            </>
+          )}
         </div>
       </div>
 
@@ -54,38 +64,41 @@ export function CartPanel({ selectedProductId, onSelectLine, onOpenCustomer, onC
               <li
                 key={line.product.id}
                 onClick={() => onSelectLine(line.product.id)}
-                className={cn('flex items-center gap-2 px-4 py-2.5 cursor-pointer', selectedProductId === line.product.id && 'bg-brand-soft/40')}
+                className={cn('flex items-center gap-3 px-5 py-3.5 cursor-pointer transition-colors', selectedProductId === line.product.id && 'bg-brand-soft/40')}
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{line.product.name}</p>
-                  <p className="text-xs text-muted-foreground">{formatMoney(line.product.sale_price)} each</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatMoney(line.product.sale_price)} each
+                    {line.discount > 0 && <span className="text-error"> &middot; &minus;{formatMoney(line.discount)}</span>}
+                  </p>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <button
-                    className="flex size-6 items-center justify-center rounded border border-border hover:bg-muted"
+                    className="flex size-8 items-center justify-center rounded-md border border-border transition-colors hover:bg-muted"
                     onClick={(e) => {
                       e.stopPropagation()
                       updateQuantity(line.product.id, line.quantity - 1)
                     }}
                     aria-label="Decrease quantity"
                   >
-                    <Minus className="size-3" />
+                    <Minus className="size-3.5" />
                   </button>
-                  <span className="w-6 text-center text-sm tabular-nums">{line.quantity}</span>
+                  <span className="w-7 text-center text-sm font-medium tabular-nums">{line.quantity}</span>
                   <button
-                    className="flex size-6 items-center justify-center rounded border border-border hover:bg-muted"
+                    className="flex size-8 items-center justify-center rounded-md border border-border transition-colors hover:bg-muted"
                     onClick={(e) => {
                       e.stopPropagation()
                       updateQuantity(line.product.id, line.quantity + 1)
                     }}
                     aria-label="Increase quantity"
                   >
-                    <Plus className="size-3" />
+                    <Plus className="size-3.5" />
                   </button>
                 </div>
-                <span className="w-16 shrink-0 text-right text-sm font-medium">{formatMoney(line.product.sale_price * line.quantity - line.discount)}</span>
+                <span className="w-16 shrink-0 text-right text-sm font-semibold">{formatMoney(line.product.sale_price * line.quantity - line.discount)}</span>
                 <button
-                  className="text-muted-foreground hover:text-error"
+                  className="text-muted-foreground transition-colors hover:text-error"
                   onClick={(e) => {
                     e.stopPropagation()
                     removeLine(line.product.id)
@@ -100,32 +113,32 @@ export function CartPanel({ selectedProductId, onSelectLine, onOpenCustomer, onC
         )}
       </div>
 
-      <div className="space-y-1.5 border-t border-border px-4 py-3 text-sm">
+      <div className="space-y-2 border-t border-border px-5 py-4 text-sm">
         <div className="flex justify-between text-muted-foreground">
           <span>Subtotal</span>
-          <span>{formatMoney(subtotal())}</span>
+          <span className="tabular-nums">{formatMoney(subtotal())}</span>
         </div>
         {totalDiscount() > 0 && (
           <div className="flex justify-between text-muted-foreground">
             <span>Discount</span>
-            <span>&minus;{formatMoney(totalDiscount())}</span>
+            <span className="tabular-nums">&minus;{formatMoney(totalDiscount())}</span>
           </div>
         )}
         {totalTax() > 0 && (
           <div className="flex justify-between text-muted-foreground">
-            <span>Tax</span>
-            <span>{formatMoney(totalTax())}</span>
+            <span>Tax (est.)</span>
+            <span className="tabular-nums">{formatMoney(totalTax())}</span>
           </div>
         )}
-        <div className="flex justify-between text-base font-semibold">
+        <div className="flex justify-between border-t border-border pt-2 text-base font-semibold">
           <span>Total</span>
-          <span>{formatMoney(total())}</span>
+          <span className="tabular-nums">{formatMoney(total())}</span>
         </div>
       </div>
 
-      <div className="p-4 pt-0">
+      <div className="p-5 pt-0">
         <Button className="w-full" size="lg" disabled={lines.length === 0 || checkoutDisabled} onClick={onCheckout}>
-          Checkout (F4)
+          Charge {formatMoney(total())} (F4)
         </Button>
       </div>
     </div>

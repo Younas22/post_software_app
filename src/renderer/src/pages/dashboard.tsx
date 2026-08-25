@@ -82,7 +82,7 @@ export function DashboardPage(): React.JSX.Element {
 
   return (
     <div className="space-y-6 p-6">
-      <h1 className="text-lg font-semibold">Dashboard</h1>
+      <h1 className="text-xl font-semibold tracking-tight">Dashboard</h1>
 
       {online !== 'online' ? (
         <OfflineSummary />

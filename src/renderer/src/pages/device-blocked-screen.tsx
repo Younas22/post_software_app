@@ -15,6 +15,7 @@ export function DeviceBlockedScreen({ message, onSignOut }: { message: string; o
         <Button variant="outline" className="w-full" onClick={onSignOut}>
           Sign out
         </Button>
+        <p className="text-xs text-muted-foreground">You&apos;ll be asked to register this device again after signing back in.</p>
       </div>
     </AuthLayout>
   )

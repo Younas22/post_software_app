@@ -51,7 +51,7 @@ export function InventoryPage(): React.JSX.Element {
   return (
     <div className="space-y-4 p-6">
       <div>
-        <h1 className="text-lg font-semibold">Inventory</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Inventory</h1>
         <p className="text-sm text-muted-foreground">
           Stock levels for {branch?.name ?? 'this branch'} — read from this device's local cache, kept in sync automatically.
         </p>

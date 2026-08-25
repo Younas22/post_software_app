@@ -14,6 +14,8 @@ interface PosState {
   addProduct(product: Product): void
   updateQuantity(productId: number, quantity: number): void
   updateDiscount(productId: number, discount: number): void
+  /** Cart-wide quick-discount — mirrors post_software_web's DiscountPopover/applyDiscountToAll exactly (same percent/fixed formula, including the "fixed" case capping per-line rather than splitting across lines). */
+  applyDiscountToAll(type: 'fixed' | 'percent', value: number): void
   removeLine(productId: number): void
   setCustomer(customer: Customer | null): void
   ensureTransactionId(): string
@@ -47,7 +49,16 @@ export const usePosStore = create<PosState>((set, get) => ({
     })),
 
   updateDiscount: (productId, discount) =>
-    set((state) => ({ lines: state.lines.map((l) => (l.product.id === productId ? { ...l, discount } : l)) })),
+    set((state) => ({ lines: state.lines.map((l) => (l.product.id === productId ? { ...l, discount: Math.max(0, discount) } : l)) })),
+
+  applyDiscountToAll: (type, value) =>
+    set((state) => ({
+      lines: state.lines.map((l) => {
+        const lineSubtotal = l.quantity * l.product.sale_price
+        const discount = type === 'percent' ? Math.round(((lineSubtotal * value) / 100) * 100) / 100 : Math.min(value, lineSubtotal)
+        return { ...l, discount }
+      })
+    })),
 
   removeLine: (productId) => set((state) => ({ lines: state.lines.filter((l) => l.product.id !== productId) })),
 

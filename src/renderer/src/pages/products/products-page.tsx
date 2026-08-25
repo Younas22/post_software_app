@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Package } from 'lucide-react'
-import { ResourceCrudPage, statusBadgeColumn } from '@renderer/components/data/resource-crud-page'
+import { ResourceCrudPage, statusBadgeColumn, type FilterConfig } from '@renderer/components/data/resource-crud-page'
 import { Tabs } from '@renderer/components/ui/tabs'
 import { useAuthStore } from '@renderer/lib/stores/authStore'
 import { remote } from '@renderer/lib/remote'
@@ -50,6 +50,22 @@ export function ProductsPage(): React.JSX.Element {
     statusBadgeColumn()
   ]
 
+  const productFilters: FilterConfig[] = [
+    {
+      name: 'category_id',
+      label: 'Category',
+      options: categories.map((c) => ({ value: String(c.id), label: c.name }))
+    },
+    {
+      name: 'status',
+      label: 'Status',
+      options: [
+        { value: 'active', label: 'Active' },
+        { value: 'inactive', label: 'Inactive' }
+      ]
+    }
+  ]
+
   return (
     <div>
       <div className="px-6 pt-4">
@@ -71,6 +87,7 @@ export function ProductsPage(): React.JSX.Element {
             searchPlaceholder="Search by name, SKU or barcode..."
             emptyIcon={Package}
             columns={productColumns}
+            filters={productFilters}
             canCreate={hasPermission('products.create')}
             canEdit={hasPermission('products.update')}
             canDelete={hasPermission('products.delete')}

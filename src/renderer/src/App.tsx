@@ -102,6 +102,13 @@ export default function App(): React.JSX.Element {
       setPhase('syncing')
       try {
         await window.pos.sync.runInitial()
+        // The loadContext() above ran before this device had ever synced —
+        // on a first sync (or right after a re-registration, which now
+        // resets the cached business/branch rows, see deviceManager.
+        // register()) that read whatever was cached at the time, which can
+        // be stale or empty. Reload once more now that runInitial() has
+        // actually written the correct business/branch into local SQLite.
+        await loadContext()
         setPhase('ready')
       } catch {
         // SyncingScreen shows the retry action itself via progress state.
@@ -155,9 +162,17 @@ export default function App(): React.JSX.Element {
           onRegistered={async (status) => {
             setDevice(status)
             setPhase('syncing')
+            // deviceManager.register() just reset the cached business/branch
+            // rows (see its comment), so this first loadContext() has
+            // nothing meaningful to show yet — it's only here so the store
+            // isn't left holding a PREVIOUS device's context while syncing
+            // runs. The real load happens after runInitial() below, once
+            // the newly-registered business/branch have actually landed in
+            // local SQLite.
             await loadContext()
             try {
               await window.pos.sync.runInitial()
+              await loadContext()
             } finally {
               setPhase('ready')
             }
@@ -174,7 +189,16 @@ export default function App(): React.JSX.Element {
         <DeviceBlockedScreen
           message={blockedMessage}
           onSignOut={async () => {
+            // The server no longer recognizes this device's credential (401)
+            // — clear it along with the session, not just the session.
+            // Otherwise the next login re-runs evaluateDevice() with the
+            // same stale isRegistered:true device record, immediately fails
+            // validate() again, and traps the user on this exact screen in
+            // an unrecoverable loop. Forgetting the device here routes the
+            // next login to the normal "device-setup" (register) screen.
+            await window.pos.device.forget()
             await window.pos.auth.logout()
+            setDevice(await window.pos.device.getStatus())
             setSession(null)
             setPhase('login')
           }}

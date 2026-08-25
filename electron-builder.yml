@@ -76,10 +76,14 @@ linux:
       arch: [x64]
   category: Office
 
-# electron-updater feed — 'generic' points at any static file host serving
-# latest.yml/latest-mac.yml + the installers. Replace with the real update
-# server before shipping; see docs/FINAL_DEVELOPMENT_REPORT.md.
+# electron-updater feed — GitHub Releases on this project's own repo.
+# electron-builder uploads latest.yml/latest-mac.yml + the installers to a
+# GitHub Release on publish; electron-updater (renderer's "Check for
+# updates") reads that same feed to detect and download new versions.
+# Publishing requires a GH_TOKEN/GITHUB_TOKEN env var (repo-scoped PAT) —
+# see docs/FINAL_DEVELOPMENT_REPORT.md.
 publish:
-  provider: generic
-  url: https://updates.example-invalid.test/universal-pos-desktop/
-  channel: latest
+  provider: github
+  owner: Younas22
+  repo: post_software_app
+  releaseType: release

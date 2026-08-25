@@ -48,7 +48,7 @@ export function SubscriptionPage(): React.JSX.Element {
 
   return (
     <div className="space-y-4 p-6">
-      <h1 className="text-lg font-semibold">Subscription</h1>
+      <h1 className="text-xl font-semibold tracking-tight">Subscription</h1>
 
       {online !== 'online' && !subscription ? (
         <EmptyState title="Requires internet" description="Subscription details need a connection to the server." />

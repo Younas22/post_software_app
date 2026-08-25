@@ -45,6 +45,26 @@ export function getCachedBranch(): (BranchInfo & { id: number }) | null {
   return { id: row.id, name: row.name, address: row.address, phone: row.phone, is_main: !!row.is_main }
 }
 
+/**
+ * `business`/`branch` are meant to hold exactly one row each (see the
+ * "Single-row caches" note above), but saveBusiness()/saveBranch() only
+ * REPLACE a row when its id matches — if this device registers against a
+ * different business/branch than whatever it last cached, the old row is
+ * never removed, `ON CONFLICT(id)` just leaves it in place alongside a new
+ * one, and getCachedBusiness()/getCachedBranch()'s unordered `LIMIT 1` can
+ * then return either one. Called from deviceManager.register() (alongside
+ * resetCachedCatalog) so every re-registration starts from a clean slate;
+ * runInitialSync() re-populates both immediately afterward.
+ */
+export function resetCachedContext(): void {
+  const db = getDb()
+  const tx = db.transaction(() => {
+    db.prepare('DELETE FROM business').run()
+    db.prepare('DELETE FROM branch').run()
+  })
+  tx()
+}
+
 export function saveUser(user: AuthUser): void {
   const now = new Date().toISOString()
   getDb()

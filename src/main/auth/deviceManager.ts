@@ -2,7 +2,9 @@ import { EventEmitter } from 'node:events'
 import os from 'node:os'
 import { apiGetCurrentDevice, apiRegisterDevice } from '../api/deviceApi'
 import { getDeviceToken, setDeviceToken } from './secureStore'
-import { getSetting, setSetting } from '../db/repositories/syncMetaRepo'
+import { getSetting, setSetting, clearAllCursors } from '../db/repositories/syncMetaRepo'
+import { resetCachedCatalog } from '../db/repositories/catalogRepo'
+import { resetCachedContext } from '../db/repositories/contextRepo'
 import { ApiRequestError } from '../api/httpClient'
 import { onlineMonitor } from '../sync/onlineMonitor'
 import { scoped } from '../logging/logger'
@@ -46,7 +48,21 @@ class DeviceManager extends EventEmitter {
     setDeviceToken(token)
     this.record = device
     setSetting(DEVICE_RECORD_KEY, JSON.stringify(device))
-    log.info(`Device registered: ${device.name} (#${device.id}) for branch ${branchId}`)
+
+    // This install's cached catalog (products/categories/customers/...) has
+    // no business_id column — it assumes one installation belongs to one
+    // business forever. Registering (or re-registering, e.g. after the
+    // device-blocked-loop recovery) can point this same install at a
+    // different business/branch than whatever it last synced, and a stale
+    // cache would silently merge the old business's data into the new
+    // one's views (see resetCachedCatalog). Always reset on register — the
+    // caller (device-setup) already triggers a fresh runInitialSync()
+    // right after this resolves, so nothing is left unsynced.
+    resetCachedCatalog()
+    resetCachedContext()
+    clearAllCursors()
+
+    log.info(`Device registered: ${device.name} (#${device.id}) for branch ${branchId} — local catalog cache reset`)
     this.emit('change', this.status())
     return this.status()
   }

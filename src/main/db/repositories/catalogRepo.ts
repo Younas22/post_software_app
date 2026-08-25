@@ -210,6 +210,35 @@ export function searchCustomers(query: string, limit = 50): Customer[] {
     .all(like, like, limit) as Customer[]
 }
 
+/**
+ * Wipes the locally cached server-authoritative catalog (categories,
+ * products, customers, inventory, payment methods) — everything the sync
+ * engine upserts, none of it locally originated.
+ *
+ * These tables carry no business_id column at all: the local schema was
+ * built on a "one installation = one business" assumption, and upserts are
+ * keyed only by the server's row id, so re-registering this device against
+ * a DIFFERENT business never removes the previous business's rows — they
+ * just sit there forever, indistinguishable from the new business's own
+ * data in every query (searchProducts, listCustomers, ...). Called from
+ * deviceManager.register() on every successful (re-)registration so a
+ * device that ever changes business/branch starts from a clean slate
+ * instead of silently merging two businesses' catalogs. Deliberately does
+ * NOT touch sales/sale_items/payments/sync_queue — those may hold
+ * not-yet-synced transactions and must never be discarded implicitly.
+ */
+export function resetCachedCatalog(): void {
+  const db = getDb()
+  const tx = db.transaction(() => {
+    db.prepare('DELETE FROM products').run()
+    db.prepare('DELETE FROM categories').run()
+    db.prepare('DELETE FROM customers').run()
+    db.prepare('DELETE FROM inventory').run()
+    db.prepare('DELETE FROM payment_methods').run()
+  })
+  tx()
+}
+
 export function lowStockProducts(branchId: number): Array<Product & { stock_quantity: number }> {
   return getDb()
     .prepare(

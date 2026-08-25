@@ -240,10 +240,16 @@ info) are kept visually distinct from the brand green throughout.
    The config targets both Intel and Apple Silicon and the app code has no known Windows-specific
    assumptions, but this is an expectation, not a tested fact — must be built and QA'd on a real
    Mac before shipping.
-3. **No live auto-update feed.** `electron-updater` is fully wired (check/download/install UI,
-   non-destructive-to-local-data design) but `publish.url` is a placeholder — needs a real static
-   file host or S3/GitHub Releases before "Check for updates" does anything but report "not
-   available."
+3. **Auto-update feed is live (GitHub Releases).** `electron-builder.yml`'s `publish` points at
+   `github.com/Younas22/post_software_app` (public repo, so no auth needed on the client side —
+   every install's "Check for updates" hits the same public release feed). To ship a new version:
+   bump `version` in `package.json`, then run
+   `CSC_IDENTITY_AUTO_DISCOVERY=false GH_TOKEN=<repo-scoped PAT> npx electron-builder --win --publish always`
+   (`npm run build` first if `out/` isn't already current). This uploads the installer + portable
+   exe + `latest.yml`/blockmap and creates the matching `vX.Y.Z` GitHub Release; electron-updater
+   in already-installed clients then detects the new version automatically. The PAT only needs
+   `repo` scope and is only ever used on the machine doing the release — it is never bundled into
+   the app or seen by end users.
 4. **No product image upload from the desktop app.** `POST /products` supports multipart image
    upload server-side; the desktop Products form only sends the text fields (name/SKU/barcode/
    pricing/etc.) — image management stays a web-app/admin-panel task for now.

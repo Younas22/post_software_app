@@ -1,5 +1,5 @@
 import { Truck } from 'lucide-react'
-import { ResourceCrudPage, statusBadgeColumn } from '@renderer/components/data/resource-crud-page'
+import { ResourceCrudPage, statusBadgeColumn, type FilterConfig } from '@renderer/components/data/resource-crud-page'
 import { useAuthStore } from '@renderer/lib/stores/authStore'
 import type { ColumnConfig } from '@renderer/components/data/field-config'
 
@@ -18,6 +18,17 @@ const columns: ColumnConfig<SupplierRow>[] = [
   statusBadgeColumn()
 ]
 
+const filters: FilterConfig[] = [
+  {
+    name: 'status',
+    label: 'Status',
+    options: [
+      { value: 'active', label: 'Active' },
+      { value: 'inactive', label: 'Inactive' }
+    ]
+  }
+]
+
 export function SuppliersPage(): React.JSX.Element {
   const hasPermission = useAuthStore((s) => s.hasPermission)
 
@@ -29,6 +40,7 @@ export function SuppliersPage(): React.JSX.Element {
       searchPlaceholder="Search suppliers..."
       emptyIcon={Truck}
       columns={columns}
+      filters={filters}
       canCreate={hasPermission('suppliers.create')}
       canEdit={hasPermission('suppliers.update')}
       canDelete={hasPermission('suppliers.delete')}

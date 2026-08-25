@@ -39,17 +39,17 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+        <div className="flex items-start justify-between gap-3 border-b border-border px-6 py-5">
           <div>
-            <h2 className="text-base font-semibold">{title}</h2>
+            <h2 className="text-[17px] font-semibold">{title}</h2>
             {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
           </div>
           <IconButton aria-label="Close dialog" onClick={onClose}>
             <X className="size-4" />
           </IconButton>
         </div>
-        <div className="overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-border px-5 py-4">{footer}</div>}
+        <div className="overflow-y-auto px-6 py-5">{children}</div>
+        {footer && <div className="flex justify-end gap-2.5 border-t border-border px-6 py-4">{footer}</div>}
       </div>
     </div>,
     document.body

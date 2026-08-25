@@ -40,7 +40,7 @@ export function ReturnsPage(): React.JSX.Element {
   return (
     <div className="space-y-4 p-6">
       <div>
-        <h1 className="text-lg font-semibold">Returns</h1>
+        <h1 className="text-xl font-semibold tracking-tight">Returns</h1>
         <p className="text-sm text-muted-foreground">Refunds processed against completed sales.</p>
       </div>
 

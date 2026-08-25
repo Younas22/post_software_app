@@ -19,10 +19,15 @@ const variantClasses: Record<Variant, string> = {
   danger: 'bg-error text-error-foreground hover:brightness-90'
 }
 
+// Desktop click targets are sized up from the web app's compact/mobile-first
+// scale (h-8/h-10/h-12) — a mouse-and-keyboard workstation used for a full
+// shift benefits from a slightly larger, more comfortable hit area than a
+// touch-responsive browser breakpoint does. Kept modest (a few px per step),
+// per the redesign brief's "do not make things unnecessarily huge" rule.
 const sizeClasses: Record<Size, string> = {
-  sm: 'h-8 px-3 text-sm gap-1.5',
-  md: 'h-10 px-4 text-sm gap-2',
-  lg: 'h-12 px-6 text-base gap-2'
+  sm: 'h-9 px-3.5 text-sm gap-1.5',
+  md: 'h-11 px-4.5 text-sm gap-2',
+  lg: 'h-13 px-6 text-base gap-2.5'
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(

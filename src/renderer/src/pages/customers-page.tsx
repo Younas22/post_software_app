@@ -1,5 +1,5 @@
 import { Users } from 'lucide-react'
-import { ResourceCrudPage, statusBadgeColumn } from '@renderer/components/data/resource-crud-page'
+import { ResourceCrudPage, statusBadgeColumn, type FilterConfig } from '@renderer/components/data/resource-crud-page'
 import { useAuthStore } from '@renderer/lib/stores/authStore'
 import type { ColumnConfig } from '@renderer/components/data/field-config'
 
@@ -18,6 +18,17 @@ const columns: ColumnConfig<CustomerRow>[] = [
   statusBadgeColumn()
 ]
 
+const filters: FilterConfig[] = [
+  {
+    name: 'status',
+    label: 'Status',
+    options: [
+      { value: 'active', label: 'Active' },
+      { value: 'inactive', label: 'Inactive' }
+    ]
+  }
+]
+
 export function CustomersPage(): React.JSX.Element {
   const hasPermission = useAuthStore((s) => s.hasPermission)
 
@@ -29,6 +40,7 @@ export function CustomersPage(): React.JSX.Element {
       searchPlaceholder="Search customers..."
       emptyIcon={Users}
       columns={columns}
+      filters={filters}
       canCreate={hasPermission('customers.create')}
       canEdit={hasPermission('customers.update')}
       canDelete={hasPermission('customers.delete')}

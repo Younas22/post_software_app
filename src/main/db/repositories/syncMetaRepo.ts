@@ -24,6 +24,17 @@ export function getLastSyncedAt(entity: string): string | null {
   return row?.last_synced_at ?? null
 }
 
+/**
+ * Wipes every sync cursor (bootstrap/categories/products/customers/inventory).
+ * Called whenever this device (re)registers — see deviceManager.register() —
+ * so a device that's ever pointed at a different business's data doesn't
+ * treat that business's old progress as "already synced" and skip pulling
+ * the newly-registered business's catalog from scratch.
+ */
+export function clearAllCursors(): void {
+  getDb().prepare('DELETE FROM sync_cursors').run()
+}
+
 export function getSetting(key: string): string | null {
   const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get(key) as { value: string } | undefined
   return row?.value ?? null
