@@ -22,6 +22,8 @@ import type {
   Receipt,
   RemoteRequestPayload,
   RemoteResponse,
+  RemoteUploadPayload,
+  BusinessTypeBranding,
   SyncProgressEvent,
   SyncQueueItem,
   SyncStatusSummary,
@@ -60,6 +62,8 @@ export interface PreloadApi {
     close(): Promise<void>
     isMaximized(): Promise<boolean>
     onMaximizeChange(cb: (isMaximized: boolean) => void): () => void
+    /** Pass a PNG/JPEG data: URI, or null to restore the app's own icon. */
+    setIcon(dataUri: string | null): Promise<void>
   }
   system: {
     getVersion(): Promise<string>
@@ -75,7 +79,12 @@ export interface PreloadApi {
     refreshUser(): Promise<PublicSessionInfo['user']>
   }
   context: {
-    get(): Promise<{ business: BusinessInfo | null; branch: (BranchInfo & { id: number }) | null; features: string[] }>
+    get(): Promise<{
+      business: BusinessInfo | null
+      branch: (BranchInfo & { id: number }) | null
+      features: string[]
+      businessType: BusinessTypeBranding | null
+    }>
     /** Re-fetch the business profile (incl. logo) from the server; resolves to the cached copy when offline. */
     refreshBusiness(): Promise<BusinessInfo | null>
   }
@@ -118,6 +127,11 @@ export interface PreloadApi {
   }
   remote: {
     request<T = unknown>(payload: RemoteRequestPayload): Promise<RemoteResponse<T>>
+    upload<T = unknown>(payload: RemoteUploadPayload): Promise<RemoteResponse<T>>
+  }
+  media: {
+    /** A server image as a data: URI (null if unavailable/offline). */
+    fetchImage(url: string): Promise<string | null>
   }
   printer: {
     list(): Promise<PrinterInfo[]>

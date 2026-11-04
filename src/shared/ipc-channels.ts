@@ -14,6 +14,8 @@ export const IpcChannels = {
   WindowClose: 'window:close',
   WindowIsMaximized: 'window:is-maximized',
   WindowOnMaximizeChange: 'window:on-maximize-change',
+  /** Sets the window/taskbar icon to the business's favicon (a data: URI). */
+  WindowSetIcon: 'window:set-icon',
 
   // App/system
   AppGetVersion: 'app:get-version',
@@ -76,6 +78,10 @@ export const IpcChannels = {
   // or talks to the network directly — it only asks main to make one
   // specific, whitelisted call. See src/main/api/remoteGateway.ts.
   RemoteRequest: 'remote:request',
+  /** Multipart upload to a short allow-list (profile photo, business logo/favicon). */
+  RemoteUpload: 'remote:upload',
+  /** Downloads a server image (same origin as the API only) as a CSP-safe data: URI. */
+  MediaFetchImage: 'media:fetch-image',
 
   // Printing / hardware (Phase 09/10)
   PrinterList: 'printer:list',

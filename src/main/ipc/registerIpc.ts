@@ -1,13 +1,14 @@
-import { ipcMain, BrowserWindow, app, shell } from 'electron'
+import { ipcMain, BrowserWindow, app, shell, nativeImage, type NativeImage } from 'electron'
 import fs from 'node:fs'
 import { IpcChannels } from '@shared/ipc-channels'
-import type { CreateSaleInput, RemoteRequestPayload } from '@shared/types'
+import type { CreateSaleInput, RemoteRequestPayload, RemoteUploadPayload } from '@shared/types'
 
 import { sessionManager } from '../auth/sessionManager'
 import { deviceManager } from '../auth/deviceManager'
 import { syncEngine } from '../sync/syncEngine'
 import { onlineMonitor } from '../sync/onlineMonitor'
-import { handleRemoteRequest } from '../api/remoteGateway'
+import { handleRemoteRequest, handleRemoteUpload } from '../api/remoteGateway'
+import { fetchImageAsDataUri } from '../api/mediaApi'
 import {
   getProductByBarcode,
   listCategories,
@@ -26,7 +27,7 @@ import {
   getByLocalId,
   listSales
 } from '../db/repositories/salesRepo'
-import { getCachedBranch, getCachedBusiness, getCachedFeatures } from '../db/repositories/contextRepo'
+import { getCachedBranch, getCachedBusiness, getCachedBusinessType, getCachedFeatures } from '../db/repositories/contextRepo'
 import { refreshBusinessContext } from '../api/businessContext'
 import { getAllSettings, getFullSyncQueue, getSetting, listConflicts, resetFailedQueueItems, resolveConflict, setSetting } from '../db/repositories/syncMetaRepo'
 import { buildReceiptFromLocalSale } from '../pos/receiptBuilder'
@@ -79,12 +80,34 @@ function requireCashierId(): number {
 }
 
 export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
+  // The packaged icon, remembered so a business without a favicon (or a
+  // sign-out) can restore it after setIcon() replaced it.
+  let defaultWindowIcon: NativeImage | null = null
+
   // ---------- Window controls ----------
   handle(IpcChannels.WindowMinimize, () => getMainWindow()?.minimize())
   handle(IpcChannels.WindowMaximize, () => getMainWindow()?.maximize())
   handle(IpcChannels.WindowUnmaximize, () => getMainWindow()?.unmaximize())
   handle(IpcChannels.WindowClose, () => getMainWindow()?.close())
   handle(IpcChannels.WindowIsMaximized, () => getMainWindow()?.isMaximized() ?? false)
+  handle(IpcChannels.WindowSetIcon, (_e, dataUri: string | null) => {
+    const win = getMainWindow()
+    if (!win || process.platform === 'darwin') return // macOS uses the bundle icon, not a per-window one
+    if (!defaultWindowIcon) {
+      const iconPath = app.isPackaged ? process.execPath : ''
+      defaultWindowIcon = iconPath ? nativeImage.createFromPath(iconPath) : null
+    }
+    // Only PNG/JPEG data URIs decode reliably with nativeImage; anything
+    // else (or null) restores the packaged app icon.
+    if (typeof dataUri === 'string' && /^data:image\/(png|jpeg);base64,/.test(dataUri)) {
+      const image = nativeImage.createFromDataURL(dataUri)
+      if (!image.isEmpty()) {
+        win.setIcon(image)
+        return
+      }
+    }
+    if (defaultWindowIcon && !defaultWindowIcon.isEmpty()) win.setIcon(defaultWindowIcon)
+  })
 
   // ---------- App / system ----------
   handle(IpcChannels.AppGetVersion, () => app.getVersion())
@@ -112,7 +135,8 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   handle(IpcChannels.ContextGet, () => ({
     business: getCachedBusiness(),
     branch: getCachedBranch(),
-    features: getCachedFeatures()
+    features: getCachedFeatures(),
+    businessType: getCachedBusinessType()
   }))
   handle(IpcChannels.ContextRefreshBusiness, async () => refreshBusinessContext())
 
@@ -203,6 +227,8 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
 
   // ---------- Generic authenticated remote passthrough ----------
   handle(IpcChannels.RemoteRequest, async (_e, payload: RemoteRequestPayload) => handleRemoteRequest(payload))
+  handle(IpcChannels.RemoteUpload, async (_e, payload: RemoteUploadPayload) => handleRemoteUpload(payload))
+  handle(IpcChannels.MediaFetchImage, async (_e, url: string) => (typeof url === 'string' ? fetchImageAsDataUri(url) : null))
 
   // ---------- Printer / hardware ----------
   handle(IpcChannels.PrinterList, () => listSystemPrinters())

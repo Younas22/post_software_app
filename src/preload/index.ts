@@ -7,6 +7,7 @@ import type {
   OnlineStatus,
   PublicSessionInfo,
   RemoteRequestPayload,
+  RemoteUploadPayload,
   SyncProgressEvent,
   SyncStatusSummary,
   UpdaterEvent
@@ -50,6 +51,7 @@ const api: PreloadApi = {
     unmaximize: () => invoke(IpcChannels.WindowUnmaximize),
     close: () => invoke(IpcChannels.WindowClose),
     isMaximized: (): Promise<boolean> => invoke(IpcChannels.WindowIsMaximized),
+    setIcon: (dataUri: string | null): Promise<void> => invoke(IpcChannels.WindowSetIcon, dataUri),
     onMaximizeChange: (cb: (isMaximized: boolean) => void) => subscribe(IpcChannels.WindowOnMaximizeChange, cb)
   },
   system: {
@@ -108,7 +110,11 @@ const api: PreloadApi = {
     lowStock: () => invoke(IpcChannels.InventoryLowStock)
   },
   remote: {
-    request: (payload: RemoteRequestPayload) => invoke(IpcChannels.RemoteRequest, payload)
+    request: (payload: RemoteRequestPayload) => invoke(IpcChannels.RemoteRequest, payload),
+    upload: (payload: RemoteUploadPayload) => invoke(IpcChannels.RemoteUpload, payload)
+  },
+  media: {
+    fetchImage: (url: string) => invoke(IpcChannels.MediaFetchImage, url)
   },
   printer: {
     list: () => invoke(IpcChannels.PrinterList),

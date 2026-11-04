@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { apiGetConfig } from './configApi'
-import { getCachedBusiness, saveBusiness, saveBusinessLogoData } from '../db/repositories/contextRepo'
+import { getCachedBusiness, saveBusiness, saveBusinessLogoData, saveBusinessType } from '../db/repositories/contextRepo'
 import { scoped } from '../logging/logger'
 import type { BusinessInfo } from '@shared/types'
 
@@ -51,6 +51,8 @@ export async function refreshBusinessContext(): Promise<BusinessInfo | null> {
   try {
     const config = await apiGetConfig()
     if (config.business) saveBusiness(config.business)
+    // Theme/terminology/modules can change in Admin → Business Types at any time.
+    if (config.business) saveBusinessType(config.business_type)
   } catch (err) {
     log.warn('Business refresh failed — keeping cached business.', err instanceof Error ? err.message : err)
     return getCachedBusiness()

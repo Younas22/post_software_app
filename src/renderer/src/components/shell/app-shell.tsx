@@ -36,7 +36,7 @@ export function AppShell(): React.JSX.Element {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
         <SubscriptionBanner />
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        <main className="min-w-0 flex-1 overflow-y-auto bg-canvas">
           <RouteErrorBoundary>
             <Outlet />
           </RouteErrorBoundary>

@@ -3,7 +3,7 @@ import { apiFetchCurrentUser, apiLogin, apiLogout } from '../api/authApi'
 import { apiGetConfig } from '../api/configApi'
 import { cacheBusinessLogo } from '../api/businessContext'
 import { clearAll, getUserToken, setUserToken } from './secureStore'
-import { getSingleCachedUser, saveBranch, saveBusiness, saveFeatures, saveUser } from '../db/repositories/contextRepo'
+import { getSingleCachedUser, saveBranch, saveBusiness, saveBusinessType, saveFeatures, saveUser } from '../db/repositories/contextRepo'
 import { getSetting, setSetting } from '../db/repositories/syncMetaRepo'
 import { ApiRequestError } from '../api/httpClient'
 import { onlineMonitor } from '../sync/onlineMonitor'
@@ -49,6 +49,7 @@ class SessionManager extends EventEmitter {
       }
       if (config.branch) saveBranch({ ...config.branch, is_main: config.branch.is_main })
       saveFeatures(config.features)
+      saveBusinessType(config.business_type)
     } catch (err) {
       log.warn('Login succeeded but /config failed — continuing with login payload only.', err)
     }

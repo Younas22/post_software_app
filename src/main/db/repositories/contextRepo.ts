@@ -1,6 +1,6 @@
 import { getDb } from '../index'
 import { getSetting, setSetting } from './syncMetaRepo'
-import type { AuthUser, BranchInfo, BusinessInfo } from '@shared/types'
+import type { AuthUser, BranchInfo, BusinessInfo, BusinessTypeBranding } from '@shared/types'
 
 /** Single-row caches for the device's own business/branch/user context. */
 
@@ -11,12 +11,12 @@ export function saveBusiness(business: BusinessInfo): void {
     .prepare(
       // logo_data is only kept while logo_url is unchanged — a new/removed
       // logo invalidates the cached copy (see cacheBusinessLogo()).
-      `INSERT INTO business (id, name, currency, timezone, logo_url, logo_data, updated_at) VALUES (?, ?, ?, ?, ?, NULL, ?)
+      `INSERT INTO business (id, name, currency, timezone, logo_url, logo_data, favicon_url, updated_at) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)
        ON CONFLICT(id) DO UPDATE SET name=excluded.name, currency=excluded.currency, timezone=excluded.timezone,
          logo_data=CASE WHEN business.logo_url IS excluded.logo_url THEN business.logo_data ELSE NULL END,
-         logo_url=excluded.logo_url, updated_at=excluded.updated_at`
+         logo_url=excluded.logo_url, favicon_url=excluded.favicon_url, updated_at=excluded.updated_at`
     )
-    .run(business.id, business.name, business.currency, business.timezone, logoUrl, now)
+    .run(business.id, business.name, business.currency, business.timezone, logoUrl, business.favicon_url ?? null, now)
 }
 
 export function saveBusinessLogoData(businessId: number, logoUrl: string, dataUri: string): void {
@@ -24,7 +24,7 @@ export function saveBusinessLogoData(businessId: number, logoUrl: string, dataUr
 }
 
 export function getCachedBusiness(): BusinessInfo | null {
-  const row = getDb().prepare('SELECT id, name, currency, timezone, logo_url, logo_data FROM business LIMIT 1').get() as
+  const row = getDb().prepare('SELECT id, name, currency, timezone, logo_url, logo_data, favicon_url FROM business LIMIT 1').get() as
     | BusinessInfo
     | undefined
   return row ?? null
@@ -78,11 +78,21 @@ export function saveUser(user: AuthUser): void {
   const now = new Date().toISOString()
   getDb()
     .prepare(
-      `INSERT INTO app_user (id, name, email, business_id, branch_id, roles, permissions, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET name=excluded.name, email=excluded.email, business_id=excluded.business_id, branch_id=excluded.branch_id, roles=excluded.roles, permissions=excluded.permissions, updated_at=excluded.updated_at`
+      `INSERT INTO app_user (id, name, email, business_id, branch_id, roles, permissions, avatar_url, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET name=excluded.name, email=excluded.email, business_id=excluded.business_id, branch_id=excluded.branch_id, roles=excluded.roles, permissions=excluded.permissions, avatar_url=excluded.avatar_url, updated_at=excluded.updated_at`
     )
-    .run(user.id, user.name, user.email, user.business_id, user.branch_id, JSON.stringify(user.roles), JSON.stringify(user.permissions), now)
+    .run(
+      user.id,
+      user.name,
+      user.email,
+      user.business_id,
+      user.branch_id,
+      JSON.stringify(user.roles),
+      JSON.stringify(user.permissions),
+      user.avatar_url ?? null,
+      now
+    )
 }
 
 /** Exactly one app_user row is ever cached per installation's active session. */
@@ -96,6 +106,7 @@ export function getSingleCachedUser(): AuthUser | null {
         branch_id: number | null
         roles: string
         permissions: string
+        avatar_url: string | null
       }
     | undefined
   if (!row) return null
@@ -103,6 +114,7 @@ export function getSingleCachedUser(): AuthUser | null {
     id: row.id,
     name: row.name,
     email: row.email,
+    avatar_url: row.avatar_url ?? null,
     is_super_admin: false,
     status: 'active',
     client_id: null,
@@ -139,6 +151,7 @@ export function getCachedUser(userId: number): AuthUser | null {
         branch_id: number | null
         roles: string
         permissions: string
+        avatar_url: string | null
       }
     | undefined
   if (!row) return null
@@ -146,6 +159,7 @@ export function getCachedUser(userId: number): AuthUser | null {
     id: row.id,
     name: row.name,
     email: row.email,
+    avatar_url: row.avatar_url ?? null,
     is_super_admin: false,
     status: 'active',
     client_id: null,
@@ -153,5 +167,22 @@ export function getCachedUser(userId: number): AuthUser | null {
     branch_id: row.branch_id,
     roles: JSON.parse(row.roles) as string[],
     permissions: JSON.parse(row.permissions) as string[]
+  }
+}
+
+const BUSINESS_TYPE_KEY = 'business_type_branding'
+
+/** The business type's theme/terminology/modules from GET /config — cached so the app (and its login screen) look right offline. */
+export function saveBusinessType(branding: BusinessTypeBranding | null | undefined): void {
+  setSetting(BUSINESS_TYPE_KEY, branding ? JSON.stringify(branding) : '')
+}
+
+export function getCachedBusinessType(): BusinessTypeBranding | null {
+  const raw = getSetting(BUSINESS_TYPE_KEY)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as BusinessTypeBranding
+  } catch {
+    return null
   }
 }

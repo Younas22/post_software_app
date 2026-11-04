@@ -19,5 +19,11 @@ export const PERMISSIONS = {
   usersView: 'users.view',
   businessesView: 'businesses.view',
   settingsView: 'settings.view',
-  subscriptionsView: 'subscriptions.view'
+  subscriptionsView: 'subscriptions.view',
+  installmentsView: 'installments.view',
+  installmentsCreate: 'installments.create',
+  installmentsCollect: 'installments.collect',
+  installmentsCancel: 'installments.cancel',
+  customersCreate: 'customers.create',
+  productsCreate: 'products.create'
 } as const

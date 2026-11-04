@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { BranchInfo, BusinessInfo, DeviceStatus } from '@shared/types'
+import type { BranchInfo, BusinessInfo, BusinessTypeBranding, DeviceStatus } from '@shared/types'
 
 /**
  * Mirrors the REAL `GET /api/v1/subscription` response exactly (see
@@ -40,11 +40,14 @@ export interface SubscriptionInfo {
 
 interface AppState {
   business: BusinessInfo | null
+  /** The business type's theme / terminology / modules (cached in SQLite by main). */
+  businessType: BusinessTypeBranding | null
   branch: (BranchInfo & { id: number }) | null
   features: string[]
   device: DeviceStatus | null
   subscription: SubscriptionInfo | null
   setBusiness(business: BusinessInfo | null): void
+  setBusinessType(businessType: BusinessTypeBranding | null): void
   setBranch(branch: (BranchInfo & { id: number }) | null): void
   setFeatures(features: string[]): void
   setDevice(device: DeviceStatus | null): void
@@ -54,11 +57,13 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set, get) => ({
   business: null,
+  businessType: null,
   branch: null,
   features: [],
   device: null,
   subscription: null,
   setBusiness: (business) => set({ business }),
+  setBusinessType: (businessType) => set({ businessType }),
   setBranch: (branch) => set({ branch }),
   setFeatures: (features) => set({ features }),
   setDevice: (device) => set({ device }),

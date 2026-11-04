@@ -11,7 +11,7 @@ import { useAuthStore } from '@renderer/lib/stores/authStore'
 import { useAppStore } from '@renderer/lib/stores/appStore'
 import { useSyncStore } from '@renderer/lib/stores/syncStore'
 import { initTheme } from '@renderer/lib/stores/themeStore'
-import { applyBusinessContext, refreshBusinessContext } from '@renderer/lib/business'
+import { applyBusinessContext, applyBusinessType, refreshBusinessContext } from '@renderer/lib/business'
 import { toast } from '@renderer/lib/stores/toastStore'
 import type { DeviceStatus } from '@shared/types'
 
@@ -30,6 +30,13 @@ const EmployeesPage = lazy(() => import('@renderer/pages/employees-page').then((
 const BranchesPage = lazy(() => import('@renderer/pages/branches-page').then((m) => ({ default: m.BranchesPage })))
 const SubscriptionPage = lazy(() => import('@renderer/pages/subscription-page').then((m) => ({ default: m.SubscriptionPage })))
 const SettingsPage = lazy(() => import('@renderer/pages/settings/settings-page').then((m) => ({ default: m.SettingsPage })))
+const InstallmentsPage = lazy(() => import('@renderer/pages/installments/installments-page').then((m) => ({ default: m.InstallmentsPage })))
+const NewInstallmentPlanPage = lazy(() =>
+  import('@renderer/pages/installments/new-plan-page').then((m) => ({ default: m.NewInstallmentPlanPage }))
+)
+const InstallmentPlanPage = lazy(() => import('@renderer/pages/installments/plan-page').then((m) => ({ default: m.InstallmentPlanPage })))
+const CollectionsPage = lazy(() => import('@renderer/pages/installments/collections-page').then((m) => ({ default: m.CollectionsPage })))
+const SupportPage = lazy(() => import('@renderer/pages/support-page').then((m) => ({ default: m.SupportPage })))
 
 type Phase = 'booting' | 'login' | 'device-setup' | 'device-blocked' | 'syncing' | 'ready'
 
@@ -74,6 +81,7 @@ export default function App(): React.JSX.Element {
     setBranch(context.branch)
     setFeatures(context.features)
     applyBusinessContext(context.business)
+    applyBusinessType(context.businessType)
 
     // Pick up profile/logo changes made on the server (Settings, or by the
     // Super Admin) without waiting for a full re-sync. Offline → keeps the
@@ -124,6 +132,9 @@ export default function App(): React.JSX.Element {
   }
 
   async function bootstrap(): Promise<void> {
+    // Paint the last signed-in business type's colours straight away — the
+    // login screen is that trade's too (see LoginPage).
+    void window.pos.context.get().then((context) => applyBusinessType(context.businessType))
     const session = await window.pos.auth.restoreSession()
     setSession(session.user)
     if (!session.isAuthenticated) {
@@ -145,7 +156,7 @@ export default function App(): React.JSX.Element {
   if (phase === 'booting') {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
-        <LoadingState label="Starting Universal POS..." />
+        <LoadingState label="Starting..." />
       </div>
     )
   }
@@ -242,6 +253,11 @@ export default function App(): React.JSX.Element {
             <Route path="/branches" element={<BranchesPage />} />
             <Route path="/subscription" element={<SubscriptionPage />} />
             <Route path="/settings/*" element={<SettingsPage />} />
+            <Route path="/installments" element={<InstallmentsPage />} />
+            <Route path="/installments/new" element={<NewInstallmentPlanPage />} />
+            <Route path="/installments/:id" element={<InstallmentPlanPage />} />
+            <Route path="/collections" element={<CollectionsPage />} />
+            <Route path="/support" element={<SupportPage />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Routes>

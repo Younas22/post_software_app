@@ -60,7 +60,14 @@ function createMainWindow(): BrowserWindow {
   registerWindowStateHandlers(win)
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url)
+    // Links can come from server data (e.g. the Super Admin's live-chat
+    // link), so only hand safe schemes to the OS — never file:, javascript:, etc.
+    try {
+      const { protocol } = new URL(url)
+      if (['http:', 'https:', 'mailto:', 'tel:'].includes(protocol)) void shell.openExternal(url)
+    } catch {
+      /* malformed URL — ignore */
+    }
     return { action: 'deny' }
   })
 

@@ -35,6 +35,8 @@ export interface AuthUser {
   id: number
   name: string
   email: string
+  /** Absolute URL of the profile photo on the server (null → initials). */
+  avatar_url?: string | null
   is_super_admin: boolean
   status: 'active' | 'inactive'
   client_id: number | null
@@ -84,6 +86,67 @@ export interface BusinessInfo {
   logo_url?: string | null
   /** Locally cached copy of the logo as a data: URI — shown offline, and CSP-safe. */
   logo_data?: string | null
+  /** Absolute URL of the business's own browser-tab/app icon (null → logo is used). */
+  favicon_url?: string | null
+}
+
+/* ───────────── Business-type branding (Admin → Business Types) ───────────── */
+
+/** What a trade calls things — "Patient" instead of "Customer", "Menu" instead of "Products", ... */
+export interface Terminology {
+  customer: string
+  customers: string
+  product: string
+  products: string
+  sale: string
+  sales: string
+  supplier: string
+  suppliers: string
+  purchase: string
+  purchases: string
+  category: string
+  categories: string
+  inventory: string
+  pos: string
+}
+
+export type SidebarStyle = 'light' | 'dark' | 'brand'
+export type HideableModule = 'inventory' | 'purchases' | 'suppliers' | 'returns' | 'expenses'
+export type OptionalModule = 'installments'
+
+export interface BrandTheme {
+  primary_color: string
+  sidebar_style: SidebarStyle
+  login_headline: string
+  login_tagline: string
+  login_highlights: string[]
+  login_image_url: string | null
+}
+
+/** GET /config → business_type: colours, terminology and module switches for this trade. */
+export interface BusinessTypeBranding {
+  id: number
+  name: string
+  slug: string
+  icon: string | null
+  description: string | null
+  theme: BrandTheme
+  terminology: Terminology
+  modules: { hidden: HideableModule[]; enabled: OptionalModule[] }
+}
+
+/** GET /public/platform — the POS company's own profile & support contacts. */
+export interface PlatformInfo {
+  name: string
+  logo_url: string | null
+  favicon_url: string | null
+  office_address: string | null
+  support_email: string | null
+  support_phone: string | null
+  support_whatsapp: string | null
+  live_chat_url: string | null
+  support_hours: string | null
+  website: string | null
 }
 
 export interface BranchInfo {
@@ -247,6 +310,14 @@ export interface RemoteRequestPayload {
   path: string
   body?: unknown
   params?: Record<string, string | number | boolean | undefined>
+}
+
+/** A multipart upload (profile photo, business logo/favicon) sent through main — see remoteGateway.handleRemoteUpload. */
+export interface RemoteUploadPayload {
+  path: string
+  /** Plain form fields (sent as strings). */
+  fields?: Record<string, string>
+  files: Array<{ field: string; name: string; type: string; data: ArrayBuffer }>
 }
 
 export interface RemoteResponse<T = unknown> {

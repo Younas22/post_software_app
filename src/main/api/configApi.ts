@@ -1,8 +1,10 @@
 import { userClient } from './clients'
-import type { ApiSuccessEnvelope, BranchInfo, BusinessInfo } from '@shared/types'
+import type { ApiSuccessEnvelope, BranchInfo, BusinessInfo, BusinessTypeBranding } from '@shared/types'
 
 export interface ConfigResponse {
   business: BusinessInfo | null
+  /** The business type's theme, terminology and module switches (null when no type is assigned). */
+  business_type?: BusinessTypeBranding | null
   branch: (BranchInfo & { id: number }) | null
   settings: Record<string, unknown>
   features: string[]

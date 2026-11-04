@@ -197,5 +197,18 @@ export const migrations: Migration[] = [
         ALTER TABLE business ADD COLUMN logo_data TEXT;
       `)
     }
+  },
+  {
+    id: 3,
+    name: 'user_avatar_and_business_favicon',
+    up: (db): void => {
+      // Profile photo URL for the signed-in user, and the business's own
+      // app/taskbar icon (favicon) URL — both fetched as images through
+      // main (see mediaApi.ts) because the renderer CSP blocks remote images.
+      db.exec(`
+        ALTER TABLE app_user ADD COLUMN avatar_url TEXT;
+        ALTER TABLE business ADD COLUMN favicon_url TEXT;
+      `)
+    }
   }
 ]
