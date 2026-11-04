@@ -9,6 +9,8 @@ import type { Category, Product } from '@shared/types'
 
 interface ProductSearchPanelProps {
   onSelect: (product: Product) => void
+  /** Bump to force a re-read of the local catalog (e.g. after a sale deducts stock). */
+  refreshKey?: number
 }
 
 type ItemType = 'all' | 'product' | 'service'
@@ -20,7 +22,7 @@ type ItemType = 'all' | 'product' | 'service'
  * an image area, "Service" badge, SKU, price and stock. Reads the device's
  * offline SQLite catalog.
  */
-export const ProductSearchPanel = forwardRef<HTMLInputElement, ProductSearchPanelProps>(({ onSelect }, ref) => {
+export const ProductSearchPanel = forwardRef<HTMLInputElement, ProductSearchPanelProps>(({ onSelect, refreshKey = 0 }, ref) => {
   const terms = useTerms()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Product[]>([])
@@ -32,9 +34,26 @@ export const ProductSearchPanel = forwardRef<HTMLInputElement, ProductSearchPane
     void window.pos.catalog.listCategories().then(setCategories)
   }, [])
 
+  // Re-read when a background sync finishes, so stock/prices pulled from the
+  // server replace the stale values shown on the cards.
+  const [syncTick, setSyncTick] = useState(0)
   useEffect(() => {
-    void window.pos.catalog.searchProducts(query).then(setResults)
-  }, [query])
+    let wasSyncing = false
+    return window.pos.sync.onStatusChange((status) => {
+      if (wasSyncing && !status.isSyncing) setSyncTick((t) => t + 1)
+      wasSyncing = status.isSyncing
+    })
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void window.pos.catalog.searchProducts(query).then((rows) => {
+      if (!cancelled) setResults(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [query, refreshKey, syncTick])
 
   const visible = results.filter(
     (p) => (categoryId === null || p.category_id === categoryId) && (itemType === 'all' || (p.type ?? 'product') === itemType)

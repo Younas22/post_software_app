@@ -22,6 +22,7 @@ export function PosPage(): React.JSX.Element {
   const [lastResult, setLastResult] = useState<SaleCreateResult | null>(null)
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null)
   const [notFoundBarcode, setNotFoundBarcode] = useState('')
+  const [catalogVersion, setCatalogVersion] = useState(0)
 
   const hasPermission = useAuthStore((s) => s.hasPermission)
   const { addProduct, updateQuantity, removeLine, lines, setCustomer, clear } = usePosStore()
@@ -85,7 +86,7 @@ export function PosPage(): React.JSX.Element {
 
   return (
     <div className="grid h-full grid-cols-1 lg:grid-cols-[1fr_384px]">
-      <ProductSearchPanel ref={searchInputRef} onSelect={handleSelectProduct} />
+      <ProductSearchPanel ref={searchInputRef} onSelect={handleSelectProduct} refreshKey={catalogVersion} />
       <CartPanel
         selectedProductId={selectedProductId}
         onSelectLine={setSelectedProductId}
@@ -99,6 +100,8 @@ export function PosPage(): React.JSX.Element {
           onComplete={(result) => {
             setLastResult(result)
             setDialog('success')
+            // Local inventory was just deducted — reload the cards so they show the new stock.
+            setCatalogVersion((v) => v + 1)
           }}
         />
       )}
@@ -154,6 +157,7 @@ export function PosPage(): React.JSX.Element {
           onClose={() => setDialog('none')}
           onCreated={(product) => {
             toast({ variant: 'success', title: 'Product created' })
+            setCatalogVersion((v) => v + 1)
             handleSelectProduct(product)
             setDialog('none')
           }}
