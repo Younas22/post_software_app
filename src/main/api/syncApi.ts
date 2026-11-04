@@ -3,7 +3,7 @@ import type { ApiSuccessEnvelope } from '@shared/types'
 
 export interface SyncBootstrapResponse {
   device: { id: number; name: string; status: string }
-  business: { id: number; name: string; currency: string; timezone: string }
+  business: { id: number; name: string; currency: string; timezone: string; logo_url?: string | null }
   branch: { id: number; name: string; address: string | null; phone: string | null }
   settings: Record<string, unknown>
   features: string[]

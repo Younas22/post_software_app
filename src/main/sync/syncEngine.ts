@@ -23,6 +23,7 @@ import {
   type UpsertProductRow
 } from '../db/repositories/catalogRepo'
 import { getCachedBranch, saveBranch, saveBusiness, saveFeatures } from '../db/repositories/contextRepo'
+import { cacheBusinessLogo } from '../api/businessContext'
 import {
   getCursor,
   getPendingSyncQueue,
@@ -93,6 +94,7 @@ class SyncEngine extends EventEmitter {
       this.progress({ phase: 'preparing', message: 'Preparing device...' })
       const boot = await apiSyncBootstrap()
       saveBusiness(boot.business)
+      await cacheBusinessLogo()
       saveBranch({ ...boot.branch, is_main: false })
       saveFeatures(boot.features)
       replacePaymentMethods(boot.payment_methods)

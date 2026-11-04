@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { apiFetchCurrentUser, apiLogin, apiLogout } from '../api/authApi'
 import { apiGetConfig } from '../api/configApi'
+import { cacheBusinessLogo } from '../api/businessContext'
 import { clearAll, getUserToken, setUserToken } from './secureStore'
 import { getSingleCachedUser, saveBranch, saveBusiness, saveFeatures, saveUser } from '../db/repositories/contextRepo'
 import { getSetting, setSetting } from '../db/repositories/syncMetaRepo'
@@ -42,7 +43,10 @@ class SessionManager extends EventEmitter {
 
     try {
       const config = await apiGetConfig()
-      if (config.business) saveBusiness(config.business)
+      if (config.business) {
+        saveBusiness(config.business)
+        await cacheBusinessLogo()
+      }
       if (config.branch) saveBranch({ ...config.branch, is_main: config.branch.is_main })
       saveFeatures(config.features)
     } catch (err) {

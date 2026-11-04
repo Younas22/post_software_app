@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
 import { Field } from '@renderer/components/ui/field'
 import { Input } from '@renderer/components/ui/input'
+import { Select } from '@renderer/components/ui/select'
 import { Button } from '@renderer/components/ui/button'
 import { LoadingState } from '@renderer/components/ui/loading-state'
 import { remote, RemoteError } from '@renderer/lib/remote'
 import { toast } from '@renderer/lib/stores/toastStore'
 import { useAuthStore } from '@renderer/lib/stores/authStore'
+import { useAppStore } from '@renderer/lib/stores/appStore'
+import { refreshBusinessContext } from '@renderer/lib/business'
 
 interface BusinessDetail {
   id: number
@@ -16,6 +19,12 @@ interface BusinessDetail {
   address: string | null
   currency: string
   timezone: string
+}
+
+/** GET /business/locale-options — the currencies/timezones the Super Admin has enabled. */
+interface LocaleOptions {
+  currencies: Array<{ code: string; label: string }>
+  timezones: Array<{ id: string; label: string }>
 }
 
 const REGISTRY_KEYS = [
@@ -33,6 +42,9 @@ export function BusinessSettings(): React.JSX.Element {
   const [errors, setErrors] = useState<Record<string, string[]>>({})
   const [saving, setSaving] = useState(false)
 
+  const [locale, setLocale] = useState<LocaleOptions | null>(null)
+  const logo = useAppStore((s) => s.business?.logo_data ?? null)
+
   const [registry, setRegistry] = useState<Record<string, string>>({})
   const [savingRegistry, setSavingRegistry] = useState(false)
 
@@ -42,6 +54,10 @@ export function BusinessSettings(): React.JSX.Element {
       .then(({ data }) => setBusiness(data))
       .catch(() => setBusiness(null))
       .finally(() => setLoading(false))
+    remote
+      .get<LocaleOptions>('/business/locale-options')
+      .then(({ data }) => setLocale(data))
+      .catch(() => setLocale(null))
   }, [])
 
   async function saveBusiness(): Promise<void> {
@@ -51,6 +67,8 @@ export function BusinessSettings(): React.JSX.Element {
     try {
       const { data } = await remote.put<BusinessDetail>('/business', business)
       setBusiness(data)
+      // Currency/timezone/name drive formatting and branding app-wide.
+      await refreshBusinessContext()
       toast({ variant: 'success', title: 'Business profile updated' })
     } catch (err) {
       if (err instanceof RemoteError) setErrors(err.errors)
@@ -83,6 +101,16 @@ export function BusinessSettings(): React.JSX.Element {
           <CardTitle>Business profile</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            {logo ? (
+              <img src={logo} alt="" className="size-14 rounded-lg border border-border bg-white object-contain p-1" />
+            ) : (
+              <div className="flex size-14 items-center justify-center rounded-lg bg-brand-soft text-lg font-semibold text-brand">
+                {business.name.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Your business logo appears in the sidebar and on receipts. Upload or change it from the web dashboard.</p>
+          </div>
           <Field label="Name" error={errors.name?.[0]} required>
             <Input disabled={!canEdit} value={business.name} onChange={(e) => setBusiness({ ...business, name: e.target.value })} />
           </Field>
@@ -92,11 +120,31 @@ export function BusinessSettings(): React.JSX.Element {
           <Field label="Email" error={errors.email?.[0]}>
             <Input disabled={!canEdit} value={business.email ?? ''} onChange={(e) => setBusiness({ ...business, email: e.target.value })} />
           </Field>
-          <Field label="Currency (ISO 3-letter)" error={errors.currency?.[0]} required>
-            <Input disabled={!canEdit} maxLength={3} value={business.currency} onChange={(e) => setBusiness({ ...business, currency: e.target.value.toUpperCase() })} />
+          <Field label="Currency" error={errors.currency?.[0]} required>
+            <Select
+              disabled={!canEdit || !locale}
+              value={business.currency}
+              onChange={(e) => setBusiness({ ...business, currency: e.target.value })}
+            >
+              {(locale?.currencies ?? [{ code: business.currency, label: business.currency }]).map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
           </Field>
           <Field label="Timezone" error={errors.timezone?.[0]} required>
-            <Input disabled={!canEdit} value={business.timezone} onChange={(e) => setBusiness({ ...business, timezone: e.target.value })} />
+            <Select
+              disabled={!canEdit || !locale}
+              value={business.timezone}
+              onChange={(e) => setBusiness({ ...business, timezone: e.target.value })}
+            >
+              {(locale?.timezones ?? [{ id: business.timezone, label: business.timezone }]).map((tz) => (
+                <option key={tz.id} value={tz.id}>
+                  {tz.label}
+                </option>
+              ))}
+            </Select>
           </Field>
           {canEdit && (
             <Button onClick={saveBusiness} loading={saving}>

@@ -1,6 +1,6 @@
 {
   "name": "post-software-pos-desktop",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Universal POS SaaS — Windows & macOS Desktop POS (Electron + React + TypeScript + SQLite)",
   "main": "out/main/index.js",
   "author": "Universal POS SaaS",

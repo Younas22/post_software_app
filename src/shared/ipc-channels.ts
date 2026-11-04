@@ -30,6 +30,7 @@ export const IpcChannels = {
 
   // Cached business/branch/features context (Phase 03/05)
   ContextGet: 'context:get',
+  ContextRefreshBusiness: 'context:refresh-business',
 
   // Device registration (Phase 03)
   DeviceGetStatus: 'device:get-status',

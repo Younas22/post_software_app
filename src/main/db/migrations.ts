@@ -184,5 +184,18 @@ export const migrations: Migration[] = [
         );
       `)
     }
+  },
+  {
+    id: 2,
+    name: 'business_logo',
+    up: (db): void => {
+      // Business branding for the app chrome: the server URL of the logo
+      // and a cached data: URI copy so it renders offline (and within the
+      // renderer's CSP, which only allows self/data:/blob: images).
+      db.exec(`
+        ALTER TABLE business ADD COLUMN logo_url TEXT;
+        ALTER TABLE business ADD COLUMN logo_data TEXT;
+      `)
+    }
   }
 ]

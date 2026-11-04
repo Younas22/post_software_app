@@ -34,13 +34,31 @@ function StatCard({ label, value }: { label: string; value: string }): React.JSX
   )
 }
 
+/** `data` tagged with the tab it was fetched for — see the effect below. */
+interface TabResult {
+  tab: ReportTab
+  payload: Record<string, unknown>
+}
+
 export function ReportsPage(): React.JSX.Element {
   const [tab, setTab] = useState<ReportTab>('sales')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
-  const [data, setData] = useState<Record<string, unknown> | null>(null)
+  const [result, setResult] = useState<TabResult | null>(null)
+
+  // Only ever true for a payload that was actually fetched FOR the tab
+  // currently on screen. Each report tab's response shape is different
+  // ({summary, sales} vs {summary, purchases} vs ...) — clicking a new tab
+  // updates `tab` synchronously, and React re-renders with that new `tab`
+  // BEFORE the effect below has even started the matching fetch (effects
+  // always run after render/commit, never in the same pass as the state
+  // update that triggered them). Gating on `result.tab === tab` — instead
+  // of trusting `loading`/`data` timing — is what stops ReportBody from
+  // ever being handed a still-previous-tab payload for the new tab: it
+  // just shows the loading state for that one transitional render instead.
+  const data = result?.tab === tab ? result.payload : null
 
   useEffect(() => {
     setLoading(true)
@@ -48,6 +66,12 @@ export function ReportsPage(): React.JSX.Element {
   }, [tab, dateFrom, dateTo])
 
   useEffect(() => {
+    // Also guards against a slow earlier request resolving AFTER a newer
+    // one has already started (e.g. the initial "sales" load finally
+    // landing after the user has since switched tabs twice) — without
+    // this, that stale .then() would still overwrite `result` with an
+    // outdated (if same-tab) payload.
+    let cancelled = false
     setLoading(true)
     remote
       .get<Record<string, unknown>>(`/reports/${tab}`, {
@@ -55,12 +79,20 @@ export function ReportsPage(): React.JSX.Element {
         date_to: dateTo || undefined,
         page
       })
-      .then(({ data: d }) => setData(d))
+      .then(({ data: d }) => {
+        if (!cancelled) setResult({ tab, payload: d })
+      })
       .catch((err) => {
-        setData(null)
+        if (cancelled) return
+        setResult(null)
         toast({ variant: 'error', title: 'Report failed', description: err instanceof Error ? err.message : undefined })
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [tab, dateFrom, dateTo, page])
 
   return (

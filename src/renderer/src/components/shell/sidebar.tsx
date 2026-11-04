@@ -6,10 +6,20 @@ import { useAuthStore } from '@renderer/lib/stores/authStore'
 import { useAppStore } from '@renderer/lib/stores/appStore'
 import { NAV_GROUPS } from '@renderer/lib/navigation'
 
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  return ((parts[0]?.[0] ?? 'P') + (parts.length > 1 ? (parts[parts.length - 1][0] ?? '') : '')).toUpperCase()
+}
+
 export function Sidebar(): React.JSX.Element {
   const [collapsed, setCollapsed] = useState(false)
   const { hasPermission } = useAuthStore()
   const { hasFeature } = useAppStore()
+  const business = useAppStore((s) => s.business)
+  // The client's own identity, so the POS feels like their software — the
+  // logo comes from the locally cached data: URI (works offline, CSP-safe).
+  const brandName = business?.name ?? 'Universal POS'
+  const logo = business?.logo_data ?? null
 
   const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
@@ -31,11 +41,19 @@ export function Sidebar(): React.JSX.Element {
         collapsed ? 'w-[72px]' : 'w-60'
       )}
     >
-      <div className="flex h-16 items-center gap-2.5 px-5">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-sm font-bold text-brand-foreground">
-          P
-        </div>
-        {!collapsed && <span className="truncate text-base font-semibold">Universal POS</span>}
+      <div className="flex h-16 items-center gap-2.5 px-5" title={brandName}>
+        {logo ? (
+          <img
+            src={logo}
+            alt=""
+            className="size-8 shrink-0 rounded-lg border border-sidebar-border bg-white object-contain p-0.5"
+          />
+        ) : (
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand text-sm font-bold text-brand-foreground">
+            {initials(brandName)}
+          </div>
+        )}
+        {!collapsed && <span className="truncate text-base font-semibold">{brandName}</span>}
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4" aria-label="Primary">

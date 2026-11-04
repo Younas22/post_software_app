@@ -67,7 +67,8 @@ const api: PreloadApi = {
     refreshUser: (): Promise<PublicSessionInfo['user']> => invoke(IpcChannels.AuthRefreshUser)
   },
   context: {
-    get: () => invoke(IpcChannels.ContextGet)
+    get: () => invoke(IpcChannels.ContextGet),
+    refreshBusiness: () => invoke(IpcChannels.ContextRefreshBusiness)
   },
   device: {
     getStatus: (): Promise<DeviceStatus> => invoke(IpcChannels.DeviceGetStatus),

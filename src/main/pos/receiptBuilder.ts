@@ -16,7 +16,7 @@ export function buildReceiptFromLocalSale(sale: LocalSale): Receipt {
 
   return {
     invoice_number: sale.invoice_number ?? `OFFLINE-${sale.local_id.slice(0, 8).toUpperCase()}`,
-    business: business ? { name: business.name } : undefined,
+    business: business ? { name: business.name, logo_data: business.logo_data ?? null, timezone: business.timezone } : undefined,
     branch: { name: branch?.name ?? '', address: branch?.address ?? null, phone: branch?.phone ?? null },
     cashier: { name: user?.name ?? 'Unknown' },
     customer: lookupCustomerName(sale.customer_id),

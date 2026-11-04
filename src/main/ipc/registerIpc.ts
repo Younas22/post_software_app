@@ -27,6 +27,7 @@ import {
   listSales
 } from '../db/repositories/salesRepo'
 import { getCachedBranch, getCachedBusiness, getCachedFeatures } from '../db/repositories/contextRepo'
+import { refreshBusinessContext } from '../api/businessContext'
 import { getAllSettings, getFullSyncQueue, getSetting, listConflicts, resetFailedQueueItems, resolveConflict, setSetting } from '../db/repositories/syncMetaRepo'
 import { buildReceiptFromLocalSale } from '../pos/receiptBuilder'
 import { getPrinterSettings, listSystemPrinters, openCashDrawer, printReceipt, updatePrinterSettings } from '../hardware/printer'
@@ -113,6 +114,7 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
     branch: getCachedBranch(),
     features: getCachedFeatures()
   }))
+  handle(IpcChannels.ContextRefreshBusiness, async () => refreshBusinessContext())
 
   // ---------- Device ----------
   handle(IpcChannels.DeviceGetStatus, () => deviceManager.status())

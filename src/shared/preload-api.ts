@@ -76,6 +76,8 @@ export interface PreloadApi {
   }
   context: {
     get(): Promise<{ business: BusinessInfo | null; branch: (BranchInfo & { id: number }) | null; features: string[] }>
+    /** Re-fetch the business profile (incl. logo) from the server; resolves to the cached copy when offline. */
+    refreshBusiness(): Promise<BusinessInfo | null>
   }
   device: {
     getStatus(): Promise<DeviceStatus>

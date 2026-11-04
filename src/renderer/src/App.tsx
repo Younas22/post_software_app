@@ -11,7 +11,7 @@ import { useAuthStore } from '@renderer/lib/stores/authStore'
 import { useAppStore } from '@renderer/lib/stores/appStore'
 import { useSyncStore } from '@renderer/lib/stores/syncStore'
 import { initTheme } from '@renderer/lib/stores/themeStore'
-import { setFormatCurrency } from '@renderer/lib/format'
+import { applyBusinessContext, refreshBusinessContext } from '@renderer/lib/business'
 import { toast } from '@renderer/lib/stores/toastStore'
 import type { DeviceStatus } from '@shared/types'
 
@@ -37,7 +37,7 @@ export default function App(): React.JSX.Element {
   const [phase, setPhase] = useState<Phase>('booting')
   const [blockedMessage, setBlockedMessage] = useState('')
   const { status: authStatus, user, setSession } = useAuthStore()
-  const { setBusiness, setBranch, setFeatures, setDevice } = useAppStore()
+  const { setBranch, setFeatures, setDevice } = useAppStore()
   const setOnline = useSyncStore((s) => s.setOnline)
   const setProgress = useSyncStore((s) => s.setProgress)
   const setSyncStatus = useSyncStore((s) => s.setStatus)
@@ -71,10 +71,14 @@ export default function App(): React.JSX.Element {
 
   async function loadContext(): Promise<void> {
     const context = await window.pos.context.get()
-    setBusiness(context.business)
     setBranch(context.branch)
     setFeatures(context.features)
-    if (context.business) setFormatCurrency(context.business.currency)
+    applyBusinessContext(context.business)
+
+    // Pick up profile/logo changes made on the server (Settings, or by the
+    // Super Admin) without waiting for a full re-sync. Offline → keeps the
+    // cached copy; never blocks boot.
+    void refreshBusinessContext()
   }
 
   async function evaluateDevice(): Promise<void> {

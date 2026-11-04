@@ -80,6 +80,10 @@ export interface BusinessInfo {
   name: string
   currency: string
   timezone: string
+  /** Absolute URL of the business logo on the server (null = no logo). */
+  logo_url?: string | null
+  /** Locally cached copy of the logo as a data: URI — shown offline, and CSP-safe. */
+  logo_data?: string | null
 }
 
 export interface BranchInfo {
@@ -184,7 +188,7 @@ export interface LocalSale {
 
 export interface Receipt {
   invoice_number: string
-  business?: { name: string; address?: string | null }
+  business?: { name: string; address?: string | null; logo_data?: string | null; timezone?: string | null }
   branch: { name: string; address?: string | null; phone?: string | null }
   cashier: { name: string }
   customer: { name: string } | null

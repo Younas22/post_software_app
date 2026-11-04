@@ -6,16 +6,25 @@ import type { AuthUser, BranchInfo, BusinessInfo } from '@shared/types'
 
 export function saveBusiness(business: BusinessInfo): void {
   const now = new Date().toISOString()
+  const logoUrl = business.logo_url ?? null
   getDb()
     .prepare(
-      `INSERT INTO business (id, name, currency, timezone, updated_at) VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET name=excluded.name, currency=excluded.currency, timezone=excluded.timezone, updated_at=excluded.updated_at`
+      // logo_data is only kept while logo_url is unchanged — a new/removed
+      // logo invalidates the cached copy (see cacheBusinessLogo()).
+      `INSERT INTO business (id, name, currency, timezone, logo_url, logo_data, updated_at) VALUES (?, ?, ?, ?, ?, NULL, ?)
+       ON CONFLICT(id) DO UPDATE SET name=excluded.name, currency=excluded.currency, timezone=excluded.timezone,
+         logo_data=CASE WHEN business.logo_url IS excluded.logo_url THEN business.logo_data ELSE NULL END,
+         logo_url=excluded.logo_url, updated_at=excluded.updated_at`
     )
-    .run(business.id, business.name, business.currency, business.timezone, now)
+    .run(business.id, business.name, business.currency, business.timezone, logoUrl, now)
+}
+
+export function saveBusinessLogoData(businessId: number, logoUrl: string, dataUri: string): void {
+  getDb().prepare('UPDATE business SET logo_data = ? WHERE id = ? AND logo_url = ?').run(dataUri, businessId, logoUrl)
 }
 
 export function getCachedBusiness(): BusinessInfo | null {
-  const row = getDb().prepare('SELECT id, name, currency, timezone FROM business LIMIT 1').get() as
+  const row = getDb().prepare('SELECT id, name, currency, timezone, logo_url, logo_data FROM business LIMIT 1').get() as
     | BusinessInfo
     | undefined
   return row ?? null

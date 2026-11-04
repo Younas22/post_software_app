@@ -54,6 +54,7 @@ export function buildReceiptHtml(receipt: Receipt, paperSize: PaperSize): string
   .muted { color: #444; }
   .bold { font-weight: 700; }
   .business-name { font-weight: 700; font-size: 1.25em; }
+  .logo { display: block; margin: 0 auto 4px; max-width: 60%; max-height: 64px; object-fit: contain; }
   hr { border: none; border-top: 1px dashed #000; margin: 6px 0; }
   table { width: 100%; border-collapse: collapse; }
   td { padding: 1px 0; vertical-align: top; }
@@ -64,6 +65,7 @@ export function buildReceiptHtml(receipt: Receipt, paperSize: PaperSize): string
 </head>
 <body>
   <div class="center">
+    ${logoTag(receipt.business?.logo_data)}
     <div class="business-name">${escapeHtml(receipt.business?.name ?? '')}</div>
     ${receipt.branch?.name ? `<div>${escapeHtml(receipt.branch.name)}</div>` : ''}
     ${receipt.branch?.address ? `<div class="muted">${escapeHtml(receipt.branch.address)}</div>` : ''}
@@ -72,7 +74,7 @@ export function buildReceiptHtml(receipt: Receipt, paperSize: PaperSize): string
   <hr />
   <table>
     <tr><td>Invoice</td><td class="right">${escapeHtml(receipt.invoice_number)}${receipt.is_offline ? ' <span class="muted">(offline)</span>' : ''}</td></tr>
-    <tr><td>Date</td><td class="right">${escapeHtml(new Date(receipt.sale_date).toLocaleString())}</td></tr>
+    <tr><td>Date</td><td class="right">${escapeHtml(formatSaleDate(receipt.sale_date, receipt.business?.timezone))}</td></tr>
     <tr><td>Cashier</td><td class="right">${escapeHtml(receipt.cashier.name)}</td></tr>
     ${receipt.customer ? `<tr><td>Customer</td><td class="right">${escapeHtml(receipt.customer.name)}</td></tr>` : ''}
   </table>
@@ -90,4 +92,20 @@ export function buildReceiptHtml(receipt: Receipt, paperSize: PaperSize): string
   <footer class="center muted">Thank you!</footer>
 </body>
 </html>`
+}
+
+/** Only a cached raster data: URI (see cacheBusinessLogo) is ever embedded — never a remote URL. */
+function logoTag(dataUri: string | null | undefined): string {
+  if (!dataUri || !/^data:image\/(png|jpeg|gif|webp|bmp);base64,[A-Za-z0-9+/=]+$/.test(dataUri)) return ''
+  return `<img class="logo" src="${dataUri}" alt="" />`
+}
+
+/** Sale time in the business's own timezone (falls back to the PC's zone). */
+function formatSaleDate(value: string, timeZone: string | null | undefined): string {
+  const date = new Date(value)
+  try {
+    return date.toLocaleString(undefined, timeZone ? { timeZone } : undefined)
+  } catch {
+    return date.toLocaleString()
+  }
 }
