@@ -22,6 +22,8 @@ export interface SubscriptionInfo {
     name: string
     slug: string
     price: string
+    /** ISO code package prices are charged in (platform default currency). */
+    currency?: string
     billing_cycle: string
     max_businesses: number | null
     max_branches: number | null

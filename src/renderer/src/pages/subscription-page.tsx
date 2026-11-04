@@ -3,7 +3,7 @@ import { Card, CardContent } from '@renderer/components/ui/card'
 import { StatusBadge } from '@renderer/components/ui/badge'
 import { LoadingState } from '@renderer/components/ui/loading-state'
 import { EmptyState } from '@renderer/components/ui/empty-state'
-import { formatDate } from '@renderer/lib/format'
+import { formatDate, formatMoney } from '@renderer/lib/format'
 import { useAppStore, type SubscriptionInfo } from '@renderer/lib/stores/appStore'
 import { useSyncStore } from '@renderer/lib/stores/syncStore'
 
@@ -83,7 +83,7 @@ export function SubscriptionPage(): React.JSX.Element {
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Price</span>
                 <span>
-                  ${subscription.package.price} / {subscription.package.billing_cycle}
+                  {formatMoney(Number(subscription.package.price), subscription.package.currency ?? 'USD')} / {subscription.package.billing_cycle}
                 </span>
               </div>
             </CardContent>
