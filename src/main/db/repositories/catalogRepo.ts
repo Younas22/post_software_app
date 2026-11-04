@@ -47,6 +47,7 @@ export interface UpsertProductRow {
   name: string
   sku: string | null
   barcode: string | null
+  type?: 'product' | 'service'
   sale_price: number
   purchase_price: number
   tax_rate: number | null
@@ -60,16 +61,16 @@ export interface UpsertProductRow {
 export function upsertProducts(rows: UpsertProductRow[]): void {
   const db = getDb()
   const stmt = db.prepare(`
-    INSERT INTO products (id, category_id, brand_id, name, sku, barcode, sale_price, purchase_price, tax_rate, unit, minimum_stock, status, image, updated_at, deleted_at)
-    VALUES (@id, @category_id, @brand_id, @name, @sku, @barcode, @sale_price, @purchase_price, @tax_rate, @unit, @minimum_stock, @status, @image, @updated_at, NULL)
+    INSERT INTO products (id, category_id, brand_id, name, sku, barcode, type, sale_price, purchase_price, tax_rate, unit, minimum_stock, status, image, updated_at, deleted_at)
+    VALUES (@id, @category_id, @brand_id, @name, @sku, @barcode, @type, @sale_price, @purchase_price, @tax_rate, @unit, @minimum_stock, @status, @image, @updated_at, NULL)
     ON CONFLICT(id) DO UPDATE SET
       category_id=excluded.category_id, brand_id=excluded.brand_id, name=excluded.name, sku=excluded.sku,
-      barcode=excluded.barcode, sale_price=excluded.sale_price, purchase_price=excluded.purchase_price,
+      barcode=excluded.barcode, type=excluded.type, sale_price=excluded.sale_price, purchase_price=excluded.purchase_price,
       tax_rate=excluded.tax_rate, unit=excluded.unit, minimum_stock=excluded.minimum_stock, status=excluded.status,
       image=excluded.image, updated_at=excluded.updated_at, deleted_at=NULL
   `)
   const tx = db.transaction((items: UpsertProductRow[]) => {
-    for (const item of items) stmt.run(item)
+    for (const item of items) stmt.run({ ...item, type: item.type === 'service' ? 'service' : 'product' })
   })
   tx(rows)
 }

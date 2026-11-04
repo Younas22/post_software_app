@@ -1,4 +1,5 @@
-import { Minus, Plus, Trash2, UserRound, ShoppingCart, Lock } from 'lucide-react'
+import { Minus, Plus, Trash2, UserRound, ShoppingCart, Lock, ChevronsUpDown } from 'lucide-react'
+import { useTerms } from '@renderer/lib/use-branding'
 import { usePosStore } from '@renderer/lib/stores/posStore'
 import { Button } from '@renderer/components/ui/button'
 import { IconButton } from '@renderer/components/ui/icon-button'
@@ -18,6 +19,7 @@ interface CartPanelProps {
 
 export function CartPanel({ selectedProductId, onSelectLine, onOpenCustomer, onCheckout, checkoutDisabled }: CartPanelProps): React.JSX.Element {
   const { lines, customer, updateQuantity, removeLine, applyDiscountToAll, clear, subtotal, totalDiscount, totalTax, total } = usePosStore()
+  const terms = useTerms()
 
   return (
     <div className="flex h-full flex-col border-l border-border bg-card">
@@ -27,13 +29,6 @@ export function CartPanel({ selectedProductId, onSelectLine, onOpenCustomer, onC
           {lines.length > 0 && <span className="text-sm font-normal text-muted-foreground">({lines.length})</span>}
         </h2>
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={onOpenCustomer}
-            className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium transition-colors hover:bg-border"
-          >
-            <UserRound className="size-3.5" />
-            {customer ? customer.name : 'Walk-in (F8)'}
-          </button>
           <IconButton
             aria-label="Open cash drawer"
             title="Open cash drawer"
@@ -53,6 +48,22 @@ export function CartPanel({ selectedProductId, onSelectLine, onOpenCustomer, onC
             </>
           )}
         </div>
+      </div>
+
+      {/* Full-width customer picker under the header — same as the web POS cart. */}
+      <div className="border-b border-border p-3">
+        <button
+          onClick={onOpenCustomer}
+          className="flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-input bg-[var(--input-background)] px-3 text-sm transition-colors hover:bg-muted/50"
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <UserRound className="size-4 shrink-0 text-muted-foreground" />
+            <span className="truncate">{customer ? customer.name : `Walk-in ${terms.customer}`}</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+            F8 <ChevronsUpDown className="size-4" />
+          </span>
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto">

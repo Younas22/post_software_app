@@ -18,8 +18,10 @@ import { useSyncStore } from '@renderer/lib/stores/syncStore'
 import { remote, RemoteError } from '@renderer/lib/remote'
 import { toast } from '@renderer/lib/stores/toastStore'
 import type { Product } from '@shared/types'
+import { useTerms } from '@renderer/lib/use-branding'
 
 export function InventoryPage(): React.JSX.Element {
+  const terms = useTerms()
   const [query, setQuery] = useState('')
   const [lowStockOnly, setLowStockOnly] = useState(false)
   const [rows, setRows] = useState<Product[]>([])
@@ -51,7 +53,7 @@ export function InventoryPage(): React.JSX.Element {
   return (
     <div className="space-y-4 p-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Inventory</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{terms.inventory}</h1>
         <p className="text-sm text-muted-foreground">
           Stock levels for {branch?.name ?? 'this branch'} — read from this device's local cache, kept in sync automatically.
         </p>
@@ -72,7 +74,7 @@ export function InventoryPage(): React.JSX.Element {
           <TableSkeleton />
         </div>
       ) : rows.length === 0 ? (
-        <EmptyState icon={Boxes} title="No products found" description="Try a different search, or sync this device." />
+        <EmptyState icon={Boxes} title={`No ${terms.products.toLowerCase()} found`} description="Try a different search, or sync this device." />
       ) : (
         <Table>
           <THead>

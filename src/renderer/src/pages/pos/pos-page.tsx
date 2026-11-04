@@ -84,7 +84,7 @@ export function PosPage(): React.JSX.Element {
   }
 
   return (
-    <div className="grid h-full grid-cols-1 lg:grid-cols-[1fr_360px]">
+    <div className="grid h-full grid-cols-1 lg:grid-cols-[1fr_384px]">
       <ProductSearchPanel ref={searchInputRef} onSelect={handleSelectProduct} />
       <CartPanel
         selectedProductId={selectedProductId}

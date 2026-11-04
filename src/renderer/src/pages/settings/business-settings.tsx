@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Trash2, Upload } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
 import { Field } from '@renderer/components/ui/field'
 import { Input } from '@renderer/components/ui/input'
@@ -10,6 +11,8 @@ import { toast } from '@renderer/lib/stores/toastStore'
 import { useAuthStore } from '@renderer/lib/stores/authStore'
 import { useAppStore } from '@renderer/lib/stores/appStore'
 import { refreshBusinessContext } from '@renderer/lib/business'
+import { useRemoteImage } from '@renderer/lib/use-branding'
+import { initials } from '@renderer/lib/branding'
 
 interface BusinessDetail {
   id: number
@@ -19,6 +22,8 @@ interface BusinessDetail {
   address: string | null
   currency: string
   timezone: string
+  logo_url?: string | null
+  favicon_url?: string | null
 }
 
 /** GET /business/locale-options — the currencies/timezones the Super Admin has enabled. */
@@ -95,22 +100,13 @@ export function BusinessSettings(): React.JSX.Element {
   const canEdit = hasPermission('businesses.update')
 
   return (
-    <div className="max-w-lg space-y-6 p-6">
+    <div className="max-w-2xl space-y-6 p-6">
       <Card>
         <CardHeader>
           <CardTitle>Business profile</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center gap-3">
-            {logo ? (
-              <img src={logo} alt="" className="size-14 rounded-lg border border-border bg-white object-contain p-1" />
-            ) : (
-              <div className="flex size-14 items-center justify-center rounded-lg bg-brand-soft text-lg font-semibold text-brand">
-                {business.name.slice(0, 1).toUpperCase()}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground">Your business logo appears in the sidebar and on receipts. Upload or change it from the web dashboard.</p>
-          </div>
+          <BrandingAssets business={business} logoData={logo} canEdit={canEdit} onChanged={setBusiness} />
           <Field label="Name" error={errors.name?.[0]} required>
             <Input disabled={!canEdit} value={business.name} onChange={(e) => setBusiness({ ...business, name: e.target.value })} />
           </Field>
@@ -170,6 +166,140 @@ export function BusinessSettings(): React.JSX.Element {
             </Button>
           </CardContent>
         </Card>
+      )}
+    </div>
+  )
+}
+
+const ASSET_RULES = {
+  logo: { accept: 'image/png,image/jpeg,image/webp', types: /^image\/(png|jpeg|webp)$/, maxBytes: 2 * 1024 * 1024, hint: 'PNG, JPG or WebP · up to 2 MB · square works best' },
+  favicon: {
+    accept: '.png,.ico,.jpg,.jpeg,.webp',
+    types: /^image\/(png|x-icon|vnd\.microsoft\.icon|jpeg|webp)$/,
+    maxBytes: 1024 * 1024,
+    hint: 'PNG or ICO · up to 1 MB · used as the app & taskbar icon'
+  }
+} as const
+
+/**
+ * Logo + favicon for the business, uploaded straight from the desktop app
+ * (multipart through main). The logo shows in the sidebar and on receipts;
+ * the favicon becomes the window/taskbar icon (and the web app's tab icon).
+ */
+function BrandingAssets({
+  business,
+  logoData,
+  canEdit,
+  onChanged
+}: {
+  business: BusinessDetail
+  logoData: string | null
+  canEdit: boolean
+  onChanged: (b: BusinessDetail) => void
+}): React.JSX.Element {
+  const favicon = useRemoteImage(business.favicon_url)
+  return (
+    <div>
+      <p className="text-sm font-semibold">Branding</p>
+      <p className="text-xs text-muted-foreground">Your logo and app icon appear across the whole system for everyone in your business.</p>
+      <div className="mt-3 grid grid-cols-2 gap-4">
+        <AssetTile kind="logo" business={business} shown={logoData} hasSaved={!!business.logo_url} canEdit={canEdit} onChanged={onChanged} />
+        <AssetTile kind="favicon" business={business} shown={favicon ?? (business.favicon_url ? null : logoData)} hasSaved={!!business.favicon_url} canEdit={canEdit} onChanged={onChanged} />
+      </div>
+    </div>
+  )
+}
+
+function AssetTile({
+  kind,
+  business,
+  shown,
+  hasSaved,
+  canEdit,
+  onChanged
+}: {
+  kind: 'logo' | 'favicon'
+  business: BusinessDetail
+  shown: string | null
+  hasSaved: boolean
+  canEdit: boolean
+  onChanged: (b: BusinessDetail) => void
+}): React.JSX.Element {
+  const rules = ASSET_RULES[kind]
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const base = { name: business.name, currency: business.currency, timezone: business.timezone }
+
+  async function done(data: BusinessDetail, title: string): Promise<void> {
+    onChanged(data)
+    await refreshBusinessContext() // re-caches the logo, re-applies the window icon
+    toast({ variant: 'success', title })
+  }
+
+  async function pick(file: File | undefined): Promise<void> {
+    if (inputRef.current) inputRef.current.value = ''
+    if (!file) return
+    const okType = rules.types.test(file.type) || (kind === 'favicon' && /\.ico$/i.test(file.name))
+    if (!okType) return setError(kind === 'logo' ? 'Please choose a PNG, JPG or WebP image.' : 'Please choose a PNG, ICO, JPG or WebP image.')
+    if (file.size > rules.maxBytes) return setError(`The file must be ${rules.maxBytes / (1024 * 1024)} MB or smaller.`)
+    setError(null)
+    setBusy(true)
+    try {
+      // PHP only parses multipart bodies on POST → POST + _method=PUT.
+      const res = await window.pos.remote.upload<BusinessDetail>({
+        path: '/business',
+        fields: { ...base, _method: 'PUT' },
+        files: [{ field: kind, name: file.name, type: file.type, data: await file.arrayBuffer() }]
+      })
+      if (!res.ok || !res.data) throw new Error(res.errors?.[kind]?.[0] ?? res.message ?? 'Upload failed.')
+      await done(res.data, kind === 'logo' ? 'Logo updated' : 'App icon updated')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove(): Promise<void> {
+    setBusy(true)
+    setError(null)
+    try {
+      const { data } = await remote.put<BusinessDetail>('/business', { ...base, [`remove_${kind}`]: true })
+      await done(data, kind === 'logo' ? 'Logo removed' : 'App icon removed')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col rounded-xl border border-border p-4">
+      <p className="text-sm font-semibold">{kind === 'logo' ? 'Logo' : 'Favicon / app icon'}</p>
+      <p className="text-xs text-muted-foreground">{kind === 'logo' ? 'Sidebar, menus and receipts.' : 'Window & taskbar icon.'}</p>
+      <div className="mt-3 flex h-20 items-center justify-center rounded-lg bg-muted/60">
+        {shown ? (
+          <img src={shown} alt="" className={kind === 'logo' ? 'size-14 rounded-xl border border-black/5 bg-white object-contain p-1' : 'size-8 object-contain'} />
+        ) : (
+          <div className="flex size-12 items-center justify-center rounded-xl bg-brand text-sm font-bold text-brand-foreground">{initials(business.name)}</div>
+        )}
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">{rules.hint}</p>
+      {kind === 'favicon' && !hasSaved && <p className="mt-1 text-xs text-muted-foreground">Not set — your logo is used instead.</p>}
+      {error && <p className="mt-1 text-xs text-error">{error}</p>}
+      {canEdit && (
+        <div className="mt-3 flex gap-2">
+          <input ref={inputRef} type="file" accept={rules.accept} className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
+          <Button variant="outline" size="sm" loading={busy} onClick={() => inputRef.current?.click()}>
+            <Upload className="size-4" /> {hasSaved ? 'Replace' : 'Upload'}
+          </Button>
+          {hasSaved && (
+            <Button variant="ghost" size="sm" className="text-error" disabled={busy} onClick={() => void remove()}>
+              <Trash2 className="size-4" /> Remove
+            </Button>
+          )}
+        </div>
       )}
     </div>
   )

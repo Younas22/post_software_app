@@ -6,6 +6,7 @@ import type { CreateSaleInput, LocalSale, PaymentInput, SaleSyncStatus } from '@
 interface ProductPriceRow {
   id: number
   name: string
+  type: string | null
   sale_price: number
   tax_rate: number | null
 }
@@ -54,9 +55,10 @@ export function createLocalSale(input: CreateSaleInput, cashierId: number, allow
     const localId = randomUUID()
     const now = new Date().toISOString()
 
-    const priceStmt = db.prepare('SELECT id, name, sale_price, tax_rate FROM products WHERE id = ?')
+    const priceStmt = db.prepare('SELECT id, name, type, sale_price, tax_rate FROM products WHERE id = ?')
     const stockStmt = db.prepare('SELECT quantity FROM inventory WHERE branch_id = ? AND product_id = ?')
 
+    const serviceIds = new Set<number>()
     let subtotal = 0
     let totalTax = 0
     let totalDiscount = 0
@@ -68,7 +70,11 @@ export function createLocalSale(input: CreateSaleInput, cashierId: number, allow
         throw new Error(`Product ${item.product_id} not found in local catalog.`)
       }
 
-      if (!allowNegativeStock) {
+      // Services carry no stock (same rule as the server's SaleService).
+      const isService = product.type === 'service'
+      if (isService) serviceIds.add(product.id)
+
+      if (!allowNegativeStock && !isService) {
         const stockRow = stockStmt.get(input.branch_id, item.product_id) as { quantity: number } | undefined
         const available = stockRow?.quantity ?? 0
         if (available < item.quantity) {
@@ -123,7 +129,7 @@ export function createLocalSale(input: CreateSaleInput, cashierId: number, allow
     )
     for (const li of lineItems) {
       itemStmt.run(localId, li.product_id, li.product_name, li.quantity, li.unit_price, li.discount, li.tax, li.line_total)
-      adjustInventoryLocally(input.branch_id, li.product_id, -li.quantity)
+      if (!serviceIds.has(li.product_id)) adjustInventoryLocally(input.branch_id, li.product_id, -li.quantity)
     }
 
     const paymentStmt = db.prepare(

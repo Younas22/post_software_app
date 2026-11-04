@@ -172,6 +172,8 @@ export interface Product {
   name: string
   sku: string
   barcode: string | null
+  /** "service" = sold without stock (dishes, treatments, salon services). */
+  type?: 'product' | 'service'
   sale_price: number
   purchase_price: number
   tax_rate: number | null

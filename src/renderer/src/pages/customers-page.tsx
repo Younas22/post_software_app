@@ -2,6 +2,7 @@ import { Users } from 'lucide-react'
 import { ResourceCrudPage, statusBadgeColumn, type FilterConfig } from '@renderer/components/data/resource-crud-page'
 import { useAuthStore } from '@renderer/lib/stores/authStore'
 import type { ColumnConfig } from '@renderer/components/data/field-config'
+import { useTerms } from '@renderer/lib/use-branding'
 
 interface CustomerRow {
   id: number
@@ -30,14 +31,15 @@ const filters: FilterConfig[] = [
 ]
 
 export function CustomersPage(): React.JSX.Element {
+  const terms = useTerms()
   const hasPermission = useAuthStore((s) => s.hasPermission)
 
   return (
     <ResourceCrudPage<CustomerRow>
-      title="Customers"
-      description="Everyone who buys from this business."
+      title={terms.customers}
+      description={`Every ${terms.customer.toLowerCase()} of this business.`}
       path="/customers"
-      searchPlaceholder="Search customers..."
+      searchPlaceholder={`Search ${terms.customers.toLowerCase()}...`}
       emptyIcon={Users}
       columns={columns}
       filters={filters}

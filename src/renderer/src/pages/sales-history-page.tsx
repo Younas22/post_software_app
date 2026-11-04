@@ -11,8 +11,10 @@ import { formatDateTime, formatMoney } from '@renderer/lib/format'
 import { ReturnModal } from '@renderer/components/pos/return-modal'
 import { useAuthStore } from '@renderer/lib/stores/authStore'
 import type { LocalSale } from '@shared/types'
+import { useTerms } from '@renderer/lib/use-branding'
 
 export function SalesHistoryPage(): React.JSX.Element {
+  const terms = useTerms()
   const [sales, setSales] = useState<LocalSale[]>([])
   const [loading, setLoading] = useState(true)
   const [detail, setDetail] = useState<LocalSale | null>(null)
@@ -41,7 +43,7 @@ export function SalesHistoryPage(): React.JSX.Element {
   return (
     <div className="space-y-4 p-6">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Sales History</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{terms.sales === 'Sales' ? 'Sales History' : terms.sales}</h1>
         <p className="text-sm text-muted-foreground">Recent sales made on this device, including ones still waiting to sync.</p>
       </div>
 
@@ -50,7 +52,7 @@ export function SalesHistoryPage(): React.JSX.Element {
           <TableSkeleton />
         </div>
       ) : sales.length === 0 ? (
-        <EmptyState icon={ReceiptIcon} title="No sales yet" description="Sales made at the POS will appear here." />
+        <EmptyState icon={ReceiptIcon} title={`No ${terms.sales.toLowerCase()} yet`} description={`${terms.sales} made at the ${terms.pos} will appear here.`} />
       ) : (
         <Table>
           <THead>

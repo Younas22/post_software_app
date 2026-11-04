@@ -2,6 +2,7 @@ import { Truck } from 'lucide-react'
 import { ResourceCrudPage, statusBadgeColumn, type FilterConfig } from '@renderer/components/data/resource-crud-page'
 import { useAuthStore } from '@renderer/lib/stores/authStore'
 import type { ColumnConfig } from '@renderer/components/data/field-config'
+import { useTerms } from '@renderer/lib/use-branding'
 
 interface SupplierRow {
   id: number
@@ -30,14 +31,15 @@ const filters: FilterConfig[] = [
 ]
 
 export function SuppliersPage(): React.JSX.Element {
+  const terms = useTerms()
   const hasPermission = useAuthStore((s) => s.hasPermission)
 
   return (
     <ResourceCrudPage<SupplierRow>
-      title="Suppliers"
-      description="Vendors this business purchases stock from."
+      title={terms.suppliers}
+      description={`${terms.suppliers} this business purchases stock from.`}
       path="/suppliers"
-      searchPlaceholder="Search suppliers..."
+      searchPlaceholder={`Search ${terms.suppliers.toLowerCase()}...`}
       emptyIcon={Truck}
       columns={columns}
       filters={filters}

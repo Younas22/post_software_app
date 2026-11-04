@@ -28,7 +28,7 @@ function StatCard({ label, value }: { label: string; value: string }): React.JSX
     <Card>
       <CardContent className="pt-5">
         <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="mt-1 text-xl font-semibold">{value}</p>
+        <p className="mt-1 text-xl font-semibold tabular-nums [overflow-wrap:anywhere]">{value}</p>
       </CardContent>
     </Card>
   )

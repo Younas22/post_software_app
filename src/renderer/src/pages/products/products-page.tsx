@@ -6,6 +6,7 @@ import { useAuthStore } from '@renderer/lib/stores/authStore'
 import { remote } from '@renderer/lib/remote'
 import { formatMoney } from '@renderer/lib/format'
 import type { ColumnConfig } from '@renderer/components/data/field-config'
+import { useTerms } from '@renderer/lib/use-branding'
 
 interface ProductRow {
   id: number
@@ -25,6 +26,7 @@ interface CategoryRow {
 }
 
 export function ProductsPage(): React.JSX.Element {
+  const terms = useTerms()
   const [tab, setTab] = useState<'products' | 'categories'>('products')
   const hasPermission = useAuthStore((s) => s.hasPermission)
   const [categories, setCategories] = useState<CategoryRow[]>([])
@@ -82,7 +84,7 @@ export function ProductsPage(): React.JSX.Element {
       {tab === 'products' ? (
         <div>
           <ResourceCrudPage<ProductRow>
-            title="Products"
+            title={terms.products}
             path="/products"
             searchPlaceholder="Search by name, SKU or barcode..."
             emptyIcon={Package}
@@ -112,9 +114,9 @@ export function ProductsPage(): React.JSX.Element {
       ) : (
         <div>
           <ResourceCrudPage<CategoryRow>
-            title="Categories"
+            title={terms.categories}
             path="/categories"
-            searchPlaceholder="Search categories..."
+            searchPlaceholder={`Search ${terms.categories.toLowerCase()}...`}
             columns={categoryColumns}
             canCreate={hasPermission('products.create')}
             canEdit={hasPermission('products.update')}

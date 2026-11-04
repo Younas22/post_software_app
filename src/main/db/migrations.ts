@@ -210,5 +210,18 @@ export const migrations: Migration[] = [
         ALTER TABLE business ADD COLUMN favicon_url TEXT;
       `)
     }
+  },
+  {
+    id: 4,
+    name: 'product_type',
+    up: (db): void => {
+      // product | service — services (dishes, treatments, ...) are sold
+      // without stock. Existing rows can't know their type yet, so the
+      // products cursor is reset: the next sync re-pulls the catalog once.
+      db.exec(`
+        ALTER TABLE products ADD COLUMN type TEXT NOT NULL DEFAULT 'product';
+        DELETE FROM sync_cursors WHERE entity = 'products';
+      `)
+    }
   }
 ]

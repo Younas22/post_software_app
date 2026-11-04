@@ -18,6 +18,7 @@ import { toast } from '@renderer/lib/stores/toastStore'
 import { useAppStore } from '@renderer/lib/stores/appStore'
 import { useAuthStore } from '@renderer/lib/stores/authStore'
 import type { PaginationMeta, Product } from '@shared/types'
+import { useTerms } from '@renderer/lib/use-branding'
 
 interface PurchaseRow {
   id: number
@@ -40,6 +41,7 @@ interface DraftItem {
 }
 
 export function PurchasesPage(): React.JSX.Element {
+  const terms = useTerms()
   const [rows, setRows] = useState<PurchaseRow[]>([])
   const [meta, setMeta] = useState<PaginationMeta | null>(null)
   const [page, setPage] = useState(1)
@@ -89,7 +91,7 @@ export function PurchasesPage(): React.JSX.Element {
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Purchases</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{terms.purchases}</h1>
           <p className="text-sm text-muted-foreground">Stock received from suppliers.</p>
         </div>
         {hasPermission('purchases.create') && (
@@ -104,7 +106,7 @@ export function PurchasesPage(): React.JSX.Element {
           <TableSkeleton />
         </div>
       ) : rows.length === 0 ? (
-        <EmptyState icon={ShoppingBag} title="No purchases yet" />
+        <EmptyState icon={ShoppingBag} title={`No ${terms.purchases.toLowerCase()} yet`} />
       ) : (
         <Table>
           <THead>
