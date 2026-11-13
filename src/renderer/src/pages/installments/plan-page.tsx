@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Ban, CalendarClock, HandCoins, Phone, ShieldCheck, User } from 'lucide-react'
+import { ArrowLeft, Ban, CalendarClock, HandCoins, Phone, Printer, ShieldCheck, User } from 'lucide-react'
 import { Button } from '@renderer/components/ui/button'
 import { Table, THead, TBody, TR, TH, TD } from '@renderer/components/ui/table'
 import { LoadingState } from '@renderer/components/ui/loading-state'
@@ -8,6 +8,7 @@ import { EmptyState } from '@renderer/components/ui/empty-state'
 import { ConfirmDialog } from '@renderer/components/ui/confirm-dialog'
 import { InstallmentsGate, InstallmentStatusBadge, ProgressBar } from '@renderer/components/installments/installment-ui'
 import { CollectPaymentModal } from '@renderer/components/installments/collect-payment-modal'
+import { ReceiptPreviewModal } from '@renderer/components/installments/receipt-preview-modal'
 import { remote, RemoteError } from '@renderer/lib/remote'
 import { formatDate, formatMoney } from '@renderer/lib/format'
 import { toast } from '@renderer/lib/stores/toastStore'
@@ -37,6 +38,7 @@ function PlanDetail(): React.JSX.Element {
   const [collectOpen, setCollectOpen] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [cancelling, setCancelling] = useState(false)
+  const [receipt, setReceipt] = useState<{ id: number; autoPrint: boolean } | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -198,8 +200,9 @@ function PlanDetail(): React.JSX.Element {
                     <TH>Receipt</TH>
                     <TH>Date</TH>
                     <TH>Method</TH>
-                    <TH>Received by</TH>
+                    <TH>Recovery officer</TH>
                     <TH className="text-right">Amount</TH>
+                    <TH className="w-28" />
                   </TR>
                 </THead>
                 <TBody>
@@ -213,8 +216,17 @@ function PlanDetail(): React.JSX.Element {
                       </TD>
                       <TD>{formatDate(pay.payment_date)}</TD>
                       <TD className="text-muted-foreground">{pay.payment_method?.name ?? '—'}</TD>
-                      <TD className="text-muted-foreground">{pay.user?.name ?? '—'}</TD>
-                      <TD className="text-right font-semibold tabular-nums text-success">{formatMoney(Number(pay.amount))}</TD>
+                      <TD className="text-muted-foreground">{pay.recovery_officer?.name ?? pay.user?.name ?? '—'}</TD>
+                      <TD className="text-right tabular-nums">
+                        <p className="font-semibold text-success">{formatMoney(Number(pay.amount))}</p>
+                        {Number(pay.discount ?? 0) > 0 && <p className="text-xs text-muted-foreground">Discount {formatMoney(Number(pay.discount))}</p>}
+                        {Number(pay.fine ?? 0) > 0 && <p className="text-xs text-muted-foreground">Fine {formatMoney(Number(pay.fine))}</p>}
+                      </TD>
+                      <TD className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => setReceipt({ id: pay.id, autoPrint: false })}>
+                          <Printer className="size-4" /> Receipt
+                        </Button>
+                      </TD>
                     </TR>
                   ))}
                 </TBody>
@@ -270,7 +282,19 @@ function PlanDetail(): React.JSX.Element {
         </div>
       </div>
 
-      {canCollect && <CollectPaymentModal plan={p} open={collectOpen} onClose={() => setCollectOpen(false)} onCollected={setPlan} />}
+      {canCollect && (
+        <CollectPaymentModal
+          plan={p}
+          open={collectOpen}
+          onClose={() => setCollectOpen(false)}
+          onCollected={(updated, payment) => {
+            setPlan(updated)
+            // Every recovery is followed by its receipt (print dialog opens straight away).
+            setReceipt({ id: payment.id, autoPrint: true })
+          }}
+        />
+      )}
+      <ReceiptPreviewModal planId={p.id} paymentId={receipt?.id ?? null} open={receipt !== null} autoPrint={receipt?.autoPrint} onClose={() => setReceipt(null)} />
       <ConfirmDialog
         open={confirmCancel}
         title={`Cancel plan ${p.plan_number}?`}

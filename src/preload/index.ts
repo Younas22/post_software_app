@@ -114,14 +114,16 @@ const api: PreloadApi = {
     upload: (payload: RemoteUploadPayload) => invoke(IpcChannels.RemoteUpload, payload)
   },
   media: {
-    fetchImage: (url: string) => invoke(IpcChannels.MediaFetchImage, url)
+    fetchImage: (url: string) => invoke(IpcChannels.MediaFetchImage, url),
+    customerPhoto: (customerId: number) => invoke(IpcChannels.MediaCustomerPhoto, customerId)
   },
   printer: {
     list: () => invoke(IpcChannels.PrinterList),
     getDefault: () => invoke(IpcChannels.PrinterGetDefault),
     setDefault: (config: unknown) => invoke(IpcChannels.PrinterSetDefault, config),
     printReceipt: (localSaleId: string) => invoke(IpcChannels.PrinterPrintReceipt, localSaleId),
-    openCashDrawer: () => invoke(IpcChannels.PrinterOpenCashDrawer)
+    openCashDrawer: () => invoke(IpcChannels.PrinterOpenCashDrawer),
+    printDocument: (html: string) => invoke(IpcChannels.PrinterPrintDocument, html)
   },
   settings: {
     get: (key: string) => invoke(IpcChannels.SettingsGet, key),

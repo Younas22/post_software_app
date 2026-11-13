@@ -21,11 +21,14 @@ export interface InstallmentPayment {
   id: number
   receipt_number: string
   amount: string
+  discount?: string
+  fine?: string
   payment_date: string
   is_down_payment: boolean
   reference: string | null
   payment_method?: { id: number; name: string } | null
   user?: { id: number; name: string } | null
+  recovery_officer?: { id: number; name: string } | null
 }
 
 export interface InstallmentPlan {
@@ -41,6 +44,8 @@ export interface InstallmentPlan {
   installment_amount: string
   start_date: string
   paid_amount: string
+  discount_amount?: string
+  fine_amount?: string
   balance: string
   progress: number
   status: InstallmentPlanStatus
@@ -53,7 +58,16 @@ export interface InstallmentPlan {
   next_due_date?: string | null
   overdue_amount?: string
   paid_installments?: number
-  customer?: { id: number; name: string; phone: string | null; address?: string | null }
+  customer?: {
+    id: number
+    name: string
+    phone: string | null
+    address?: string | null
+    guardian_relation?: 'S/O' | 'D/O' | 'W/O' | null
+    guardian_name?: string | null
+    has_photo?: boolean
+  }
+  recovery_officer?: { id: number; name: string } | null
   branch?: { id: number; name: string }
   items?: Array<{ id: number; product_id: number; quantity: number; unit_price: string; line_total: string; serial_number: string | null; product?: { name: string } | null }>
   schedules?: InstallmentSchedule[]

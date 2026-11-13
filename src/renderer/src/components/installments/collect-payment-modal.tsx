@@ -10,6 +10,8 @@ import { formatMoney } from '@renderer/lib/format'
 import { toast } from '@renderer/lib/stores/toastStore'
 import { cn } from '@renderer/lib/cn'
 import { isoDate, type InstallmentPayment, type InstallmentPlan } from '@renderer/lib/installments'
+import { useAuthStore } from '@renderer/lib/stores/authStore'
+import { PERMISSIONS } from '@renderer/lib/navPermissions'
 import type { PaymentMethod } from '@shared/types'
 
 /**
@@ -26,7 +28,8 @@ export function CollectPaymentModal({
   plan: InstallmentPlan
   open: boolean
   onClose: () => void
-  onCollected: (plan: InstallmentPlan) => void
+  /** Called with the updated plan and the new payment (to print its receipt). */
+  onCollected: (plan: InstallmentPlan, payment: InstallmentPayment) => void
 }): React.JSX.Element {
   const balance = Number(plan.balance)
   const overdue = Number(plan.overdue_amount ?? 0)
@@ -39,6 +42,12 @@ export function CollectPaymentModal({
   const [methodId, setMethodId] = useState('')
   const [date, setDate] = useState(isoDate(new Date()))
   const [reference, setReference] = useState('')
+  const [discount, setDiscount] = useState('')
+  const [fine, setFine] = useState('')
+  const [officerId, setOfficerId] = useState('')
+  const [staff, setStaff] = useState<Array<{ id: number; name: string }>>([])
+  const user = useAuthStore((s) => s.user)
+  const canListStaff = useAuthStore((s) => s.hasPermission(PERMISSIONS.usersView))
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -55,7 +64,16 @@ export function CollectPaymentModal({
     setAmount(suggested > 0 ? suggested.toFixed(2) : '')
     setDate(isoDate(new Date()))
     setReference('')
+    setDiscount('')
+    setFine('')
+    setOfficerId(String(plan.recovery_officer?.id ?? user?.id ?? ''))
     setError(null)
+    if (canListStaff) {
+      remote
+        .get<Array<{ id: number; name: string }>>('/employees', { per_page: 100, status: 'active' })
+        .then(({ data }) => setStaff(data))
+        .catch(() => setStaff([]))
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, plan.id])
 
@@ -67,19 +85,25 @@ export function CollectPaymentModal({
 
   async function submit(): Promise<void> {
     setError(null)
-    const value = Number(amount)
-    if (!value || value <= 0) return setError('Enter an amount greater than zero.')
-    if (value > balance + 0.001) return setError(`The amount can't be more than the remaining balance (${formatMoney(balance)}).`)
+    const value = Number(amount) || 0
+    const disc = Number(discount) || 0
+    const fee = Number(fine) || 0
+    if (value < 0 || disc < 0 || fee < 0) return setError("Amounts can't be negative.")
+    if (value + disc <= 0) return setError('Enter an amount (or a discount) greater than zero.')
+    if (value + disc > balance + 0.001) return setError(`Amount plus discount can't be more than the remaining balance (${formatMoney(balance)}).`)
     setSaving(true)
     try {
       const { data } = await remote.post<{ payment: InstallmentPayment; plan: InstallmentPlan }>(`/installments/${plan.id}/payments`, {
         amount: value,
+        discount: disc,
+        fine: fee,
+        recovery_officer_id: officerId ? Number(officerId) : null,
         payment_method_id: methodId ? Number(methodId) : null,
         payment_date: date,
         reference: reference || null
       })
       toast({ variant: 'success', title: `${formatMoney(value)} collected`, description: `Receipt ${data.payment.receipt_number}` })
-      onCollected(data.plan)
+      onCollected(data.plan, data.payment)
       onClose()
     } catch (err) {
       setError(err instanceof RemoteError ? (err.fieldError('amount') ?? err.message) : 'Something went wrong.')
@@ -101,7 +125,7 @@ export function CollectPaymentModal({
             Cancel
           </Button>
           <Button onClick={submit} loading={saving}>
-            Collect {Number(amount) > 0 ? formatMoney(Number(amount)) : ''}
+            Collect {(Number(amount) || 0) + (Number(fine) || 0) > 0 ? formatMoney((Number(amount) || 0) + (Number(fine) || 0)) : ''} &amp; print
           </Button>
         </>
       }
@@ -141,6 +165,27 @@ export function CollectPaymentModal({
           </Field>
           <Field label="Date" required>
             <Input type="date" value={date} max={isoDate(new Date())} onChange={(e) => setDate(e.target.value)} />
+          </Field>
+          <Field label="Discount" hint="Authorized reduction of the balance">
+            <Input type="number" min="0" step="0.01" value={discount} placeholder="0" onChange={(e) => setDiscount(e.target.value)} />
+          </Field>
+          <Field label="Fine" hint="Late fee — collected on top">
+            <Input type="number" min="0" step="0.01" value={fine} placeholder="0" onChange={(e) => setFine(e.target.value)} />
+          </Field>
+          <Field label="Recovery officer">
+            <Select value={officerId} onChange={(e) => setOfficerId(e.target.value)}>
+              {user && <option value={user.id}>{user.name} (me)</option>}
+              {staff
+                .filter((s) => s.id !== user?.id)
+                .map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              {plan.recovery_officer && plan.recovery_officer.id !== user?.id && !staff.some((s) => s.id === plan.recovery_officer?.id) && (
+                <option value={plan.recovery_officer.id}>{plan.recovery_officer.name}</option>
+              )}
+            </Select>
           </Field>
           <Field label="Reference" hint="Cheque / transaction no. (optional)">
             <Input value={reference} maxLength={100} onChange={(e) => setReference(e.target.value)} />

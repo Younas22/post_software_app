@@ -132,6 +132,8 @@ export interface PreloadApi {
   media: {
     /** A server image as a data: URI (null if unavailable/offline). */
     fetchImage(url: string): Promise<string | null>
+    /** A customer's private photo as a data: URI (null if none / offline). */
+    customerPhoto(customerId: number): Promise<string | null>
   }
   printer: {
     list(): Promise<PrinterInfo[]>
@@ -139,6 +141,8 @@ export interface PreloadApi {
     setDefault(config: Partial<PrinterConfig>): Promise<PrinterConfig>
     printReceipt(localSaleId: string): Promise<{ ok: boolean; message?: string }>
     openCashDrawer(): Promise<{ ok: boolean; message?: string }>
+    /** Print a self-contained HTML document (system print dialog). */
+    printDocument(html: string): Promise<{ ok: boolean; message?: string }>
   }
   settings: {
     get(key: string): Promise<string | null>

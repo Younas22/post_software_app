@@ -65,6 +65,21 @@ async function printViaSystemDialog(html: string, printerName: string | null, si
   }
 }
 
+/**
+ * Prints a full-page document (the A5/A4 installment recovery receipt) through
+ * the same hidden-window engine as sales receipts, but always with the system
+ * print dialog — the thermal receipt printer configured for sales is usually
+ * not the document printer, so the user picks it (or "Save as PDF").
+ */
+export async function printDocumentHtml(html: string): Promise<HardwareResult> {
+  if (typeof html !== 'string' || !html.startsWith('<!DOCTYPE html>') || html.length > 20 * 1024 * 1024) {
+    return { ok: false, message: 'Invalid document.' }
+  }
+  const result = await printViaSystemDialog(html, null, false)
+  if (!result.ok && result.message !== 'cancelled') log.error('Document print failed', result.message)
+  return result
+}
+
 export async function listSystemPrinters(): Promise<PrinterInfo[]> {
   const probe = new BrowserWindow({ show: false, webPreferences: { offscreen: true, sandbox: true } })
   try {

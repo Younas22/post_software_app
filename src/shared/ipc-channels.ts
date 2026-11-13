@@ -82,6 +82,8 @@ export const IpcChannels = {
   RemoteUpload: 'remote:upload',
   /** Downloads a server image (same origin as the API only) as a CSP-safe data: URI. */
   MediaFetchImage: 'media:fetch-image',
+  /** A customer's private photo, fetched with the user's token, as a data: URI. */
+  MediaCustomerPhoto: 'media:customer-photo',
 
   // Printing / hardware (Phase 09/10)
   PrinterList: 'printer:list',
@@ -89,6 +91,8 @@ export const IpcChannels = {
   PrinterSetDefault: 'printer:set-default',
   PrinterPrintReceipt: 'printer:print-receipt',
   PrinterOpenCashDrawer: 'printer:open-cash-drawer',
+  /** Full-page document (installment recovery receipt) via the system print dialog. */
+  PrinterPrintDocument: 'printer:print-document',
 
   // Settings (local, non-sensitive key/value)
   SettingsGet: 'settings:get',

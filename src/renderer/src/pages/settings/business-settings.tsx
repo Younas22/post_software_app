@@ -3,6 +3,7 @@ import { Trash2, Upload } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@renderer/components/ui/card'
 import { Field } from '@renderer/components/ui/field'
 import { Input } from '@renderer/components/ui/input'
+import { Textarea } from '@renderer/components/ui/textarea'
 import { Select } from '@renderer/components/ui/select'
 import { Button } from '@renderer/components/ui/button'
 import { LoadingState } from '@renderer/components/ui/loading-state'
@@ -13,6 +14,7 @@ import { useAppStore } from '@renderer/lib/stores/appStore'
 import { refreshBusinessContext } from '@renderer/lib/business'
 import { useRemoteImage } from '@renderer/lib/use-branding'
 import { initials } from '@renderer/lib/branding'
+import { useBranding } from '@renderer/lib/use-branding'
 
 interface BusinessDetail {
   id: number
@@ -52,6 +54,7 @@ export function BusinessSettings(): React.JSX.Element {
 
   const [registry, setRegistry] = useState<Record<string, string>>({})
   const [savingRegistry, setSavingRegistry] = useState(false)
+  const { hasModule } = useBranding()
 
   useEffect(() => {
     remote
@@ -63,6 +66,13 @@ export function BusinessSettings(): React.JSX.Element {
       .get<LocaleOptions>('/business/locale-options')
       .then(({ data }) => setLocale(data))
       .catch(() => setLocale(null))
+    // Seed the registry form with the values currently in effect.
+    remote
+      .get<{ settings: Record<string, unknown> }>('/config')
+      .then(({ data }) =>
+        setRegistry(Object.fromEntries(Object.entries(data.settings ?? {}).map(([k, v]) => [k, v == null ? '' : String(v)])))
+      )
+      .catch(() => undefined)
   }, [])
 
   async function saveBusiness(): Promise<void> {
@@ -85,7 +95,8 @@ export function BusinessSettings(): React.JSX.Element {
   async function saveRegistry(): Promise<void> {
     setSavingRegistry(true)
     try {
-      await remote.put('/business/settings', registry)
+      const { data } = await remote.put<Record<string, unknown>>('/business/settings', registry)
+      setRegistry(Object.fromEntries(Object.entries(data ?? {}).map(([k, v]) => [k, v == null ? '' : String(v)])))
       toast({ variant: 'success', title: 'Settings updated' })
     } catch (err) {
       toast({ variant: 'error', title: 'Could not save', description: err instanceof Error ? err.message : undefined })
@@ -163,6 +174,51 @@ export function BusinessSettings(): React.JSX.Element {
             ))}
             <Button onClick={saveRegistry} loading={savingRegistry}>
               Save settings
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {hasPermission('settings.update') && hasModule('installments') && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Installment recovery receipt</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              The two Urdu instructions printed under the receipt header. Write <code className="rounded bg-muted px-1">{'{day}'}</code> where the
+              plan&apos;s monthly due day should appear (taken from each plan&apos;s first due date).
+            </p>
+            <Field label="Left instruction (Urdu)">
+              <Textarea
+                dir="rtl"
+                rows={2}
+                maxLength={500}
+                value={registry.installment_receipt_note_left ?? ''}
+                onChange={(e) => setRegistry((prev) => ({ ...prev, installment_receipt_note_left: e.target.value }))}
+              />
+            </Field>
+            <Field label="Right instruction (Urdu)">
+              <Textarea
+                dir="rtl"
+                rows={2}
+                maxLength={500}
+                value={registry.installment_receipt_note_right ?? ''}
+                onChange={(e) => setRegistry((prev) => ({ ...prev, installment_receipt_note_right: e.target.value }))}
+              />
+            </Field>
+            <Field label="Paper size">
+              <Select
+                value={registry.installment_receipt_paper || 'a5'}
+                onChange={(e) => setRegistry((prev) => ({ ...prev, installment_receipt_paper: e.target.value }))}
+              >
+                <option value="a5">A5 portrait</option>
+                <option value="a5-landscape">A5 landscape</option>
+                <option value="a4">A4 portrait</option>
+              </Select>
+            </Field>
+            <Button onClick={saveRegistry} loading={savingRegistry}>
+              Save receipt settings
             </Button>
           </CardContent>
         </Card>

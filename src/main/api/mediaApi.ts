@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getApiBaseUrl } from './httpClient'
+import { userClient } from './clients'
 import { scoped } from '../logging/logger'
 
 const log = scoped('media')
@@ -46,6 +47,23 @@ export async function fetchImageAsDataUri(url: string): Promise<string | null> {
     return dataUri
   } catch (err) {
     log.warn('Could not download image.', err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
+/**
+ * A customer's photo — private on the server (no public URL), so it is
+ * fetched with the signed-in user's token; the server applies the same
+ * tenant policy as viewing the customer. Not cached across sessions.
+ */
+export async function fetchCustomerPhoto(customerId: number): Promise<string | null> {
+  if (!Number.isInteger(customerId) || customerId <= 0) return null
+  try {
+    const res = await userClient.get<ArrayBuffer>(`/customers/${customerId}/photo`, { responseType: 'arraybuffer', timeout: 15000 })
+    const type = String(res.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase()
+    if (!ALLOWED_TYPES.includes(type)) return null
+    return `data:${type};base64,${Buffer.from(res.data).toString('base64')}`
+  } catch {
     return null
   }
 }

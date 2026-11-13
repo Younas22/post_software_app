@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { CalendarClock, WifiOff } from 'lucide-react'
+import { CalendarClock } from 'lucide-react'
+import { OfflineReceipts } from './offline-receipts'
 import { Badge } from '@renderer/components/ui/badge'
 import { EmptyState } from '@renderer/components/ui/empty-state'
 import { useBranding } from '@renderer/lib/use-branding'
@@ -53,11 +54,8 @@ export function InstallmentsGate({ children }: { children: ReactNode }): React.J
     )
   }
   if (online === 'offline') {
-    return (
-      <div className="p-12">
-        <EmptyState icon={WifiOff} title="You're offline" description="Installment plans are kept on the server — reconnect to view or collect payments." />
-      </div>
-    )
+    // Plans need the server; receipts already opened here can still be reprinted.
+    return <OfflineReceipts />
   }
   return <>{children}</>
 }

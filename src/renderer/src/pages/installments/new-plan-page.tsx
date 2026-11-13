@@ -10,6 +10,9 @@ import { Alert } from '@renderer/components/ui/alert'
 import { IconButton } from '@renderer/components/ui/icon-button'
 import { InstallmentsGate } from '@renderer/components/installments/installment-ui'
 import { RemotePicker } from '@renderer/components/installments/remote-picker'
+import { CustomerPhotoCapture } from '@renderer/components/installments/customer-photo-capture'
+import { useAuthStore } from '@renderer/lib/stores/authStore'
+import { PERMISSIONS } from '@renderer/lib/navPermissions'
 import { remote, RemoteError } from '@renderer/lib/remote'
 import { formatDate, formatMoney } from '@renderer/lib/format'
 import { toast } from '@renderer/lib/stores/toastStore'
@@ -24,7 +27,12 @@ interface PickCustomer {
   name: string
   phone: string | null
   address: string | null
+  guardian_relation?: Relation | null
+  guardian_name?: string | null
+  has_photo?: boolean
 }
+
+type Relation = 'S/O' | 'D/O' | 'W/O'
 
 interface PickProduct {
   id: number
@@ -60,6 +68,14 @@ function PlanForm(): React.JSX.Element {
 
   const [customer, setCustomer] = useState<PickCustomer | null>(null)
   const [customerCnic, setCustomerCnic] = useState('')
+  const [relation, setRelation] = useState<Relation>('S/O')
+  const [guardianName, setGuardianName] = useState('')
+  const [photo, setPhoto] = useState<Blob | null>(null)
+  const [savedPhoto, setSavedPhoto] = useState<string | null>(null)
+  const user = useAuthStore((s) => s.user)
+  const canListStaff = useAuthStore((s) => s.hasPermission(PERMISSIONS.usersView))
+  const [staff, setStaff] = useState<Array<{ id: number; name: string }>>([])
+  const [officerId, setOfficerId] = useState('')
   const [lines, setLines] = useState<Line[]>([])
   const [markup, setMarkup] = useState('0')
   const [downPayment, setDownPayment] = useState('0')
@@ -82,6 +98,30 @@ function PlanForm(): React.JSX.Element {
       if (cash) setMethodId(String(cash.id))
     })
   }, [])
+
+  useEffect(() => {
+    if (!canListStaff) return
+    remote
+      .get<Array<{ id: number; name: string }>>('/employees', { per_page: 100, status: 'active' })
+      .then(({ data }) => setStaff(data))
+      .catch(() => setStaff([]))
+  }, [canListStaff])
+
+  // Picking a customer brings in what's on file: guardian + their saved photo.
+  useEffect(() => {
+    setRelation(customer?.guardian_relation ?? 'S/O')
+    setGuardianName(customer?.guardian_name ?? '')
+    setPhoto(null)
+    setSavedPhoto(null)
+    if (!customer?.has_photo) return
+    let cancelled = false
+    void window.pos.media.customerPhoto(customer.id).then((uri) => {
+      if (!cancelled) setSavedPhoto(uri)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [customer])
 
   const updateStart = (value: string, freq = frequency): void => {
     setStartDate(value)
@@ -127,6 +167,22 @@ function PlanForm(): React.JSX.Element {
     if (calc.down > calc.total) return setError("The down payment can't be more than the total price.")
     setSaving(true)
     try {
+      // Customer details printed on the recovery receipt live on the customer record.
+      if ((customer.guardian_name ?? '') !== guardianName.trim() || (customer.guardian_relation ?? 'S/O') !== relation) {
+        await remote.put(`/customers/${customer.id}`, {
+          name: customer.name,
+          status: 'active',
+          guardian_relation: guardianName.trim() ? relation : null,
+          guardian_name: guardianName.trim() || null
+        })
+      }
+      if (photo) {
+        const res = await window.pos.remote.upload({
+          path: `/customers/${customer.id}/photo`,
+          files: [{ field: 'photo', name: 'customer.jpg', type: photo.type || 'image/jpeg', data: await photo.arrayBuffer() }]
+        })
+        if (!res.ok) throw new Error(res.errors?.photo?.[0] ?? res.message ?? "The customer photo couldn't be saved.")
+      }
       const { data } = await remote.post<InstallmentPlan>('/installments', {
         branch_id: branch.id,
         customer_id: customer.id,
@@ -143,13 +199,14 @@ function PlanForm(): React.JSX.Element {
         guarantor_phone: guarantor.phone || null,
         guarantor_cnic: guarantor.cnic || null,
         guarantor_address: guarantor.address || null,
-        notes: notes || null
+        notes: notes || null,
+        recovery_officer_id: officerId ? Number(officerId) : user?.id ?? null
       })
       toast({ variant: 'success', title: `Plan ${data.plan_number} created` })
       navigate(`/installments/${data.id}`)
     } catch (err) {
       if (err instanceof RemoteError) setError(Object.values(err.errors)[0]?.[0] ?? err.message)
-      else setError('Something went wrong. Please try again.')
+      else setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -197,6 +254,33 @@ function PlanForm(): React.JSX.Element {
               <Field label="CNIC / ID number" hint="Optional — printed on the plan">
                 <Input value={customerCnic} onChange={(e) => setCustomerCnic(e.target.value)} placeholder="35202-1234567-1" maxLength={30} />
               </Field>
+              <Field label="Recovery officer" hint="Collects this account's installments">
+                <Select value={officerId || String(user?.id ?? '')} onChange={(e) => setOfficerId(e.target.value)}>
+                  {user && <option value={user.id}>{user.name} (me)</option>}
+                  {staff
+                    .filter((s) => s.id !== user?.id)
+                    .map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                </Select>
+              </Field>
+              <Field label="Relation">
+                <Select value={relation} onChange={(e) => setRelation(e.target.value as Relation)} disabled={!customer}>
+                  <option value="S/O">S/O — son of</option>
+                  <option value="D/O">D/O — daughter of</option>
+                  <option value="W/O">W/O — wife of</option>
+                </Select>
+              </Field>
+              <Field label="Father / husband name" hint="Printed on the receipt">
+                <Input value={guardianName} onChange={(e) => setGuardianName(e.target.value)} maxLength={255} disabled={!customer} />
+              </Field>
+              {customer && (
+                <div className="sm:col-span-2">
+                  <CustomerPhotoCapture saved={savedPhoto} value={photo} onChange={setPhoto} />
+                </div>
+              )}
             </div>
           </Section>
 

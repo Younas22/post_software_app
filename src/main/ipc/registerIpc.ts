@@ -8,7 +8,7 @@ import { deviceManager } from '../auth/deviceManager'
 import { syncEngine } from '../sync/syncEngine'
 import { onlineMonitor } from '../sync/onlineMonitor'
 import { handleRemoteRequest, handleRemoteUpload } from '../api/remoteGateway'
-import { fetchImageAsDataUri } from '../api/mediaApi'
+import { fetchCustomerPhoto, fetchImageAsDataUri } from '../api/mediaApi'
 import {
   getProductByBarcode,
   listCategories,
@@ -31,7 +31,7 @@ import { getCachedBranch, getCachedBusiness, getCachedBusinessType, getCachedFea
 import { refreshBusinessContext } from '../api/businessContext'
 import { getAllSettings, getFullSyncQueue, getSetting, listConflicts, resetFailedQueueItems, resolveConflict, setSetting } from '../db/repositories/syncMetaRepo'
 import { buildReceiptFromLocalSale } from '../pos/receiptBuilder'
-import { getPrinterSettings, listSystemPrinters, openCashDrawer, printReceipt, updatePrinterSettings } from '../hardware/printer'
+import { getPrinterSettings, listSystemPrinters, openCashDrawer, printDocumentHtml, printReceipt, updatePrinterSettings } from '../hardware/printer'
 import { updaterService } from '../updater/autoUpdater'
 import { attachWindowStatePersistence, loadWindowState, saveWindowState } from '../windowState'
 import { scoped } from '../logging/logger'
@@ -229,6 +229,8 @@ export function registerIpc(getMainWindow: () => BrowserWindow | null): void {
   handle(IpcChannels.RemoteRequest, async (_e, payload: RemoteRequestPayload) => handleRemoteRequest(payload))
   handle(IpcChannels.RemoteUpload, async (_e, payload: RemoteUploadPayload) => handleRemoteUpload(payload))
   handle(IpcChannels.MediaFetchImage, async (_e, url: string) => (typeof url === 'string' ? fetchImageAsDataUri(url) : null))
+  handle(IpcChannels.MediaCustomerPhoto, async (_e, customerId: number) => fetchCustomerPhoto(Number(customerId)))
+  handle(IpcChannels.PrinterPrintDocument, async (_e, html: string) => printDocumentHtml(html))
 
   // ---------- Printer / hardware ----------
   handle(IpcChannels.PrinterList, () => listSystemPrinters())

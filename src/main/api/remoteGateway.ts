@@ -40,6 +40,8 @@ const ALLOWED_PREFIXES = [
   '/stock-movements',
   '/notifications',
   '/user',
+  // Read-only bootstrap (settings values for the business settings screen).
+  '/config',
   // Installment plans (business types with the `installments` module).
   '/installments',
   // The POS company's public profile & support contacts (login + Support page).
@@ -51,6 +53,8 @@ const ALLOWED_PREFIXES = [
  * these exact endpoints, image files only, and a hard size cap.
  */
 const UPLOAD_PATHS = ['/user/avatar', '/business']
+/** Customer photo (installment onboarding) — /customers/{id}/photo. */
+const UPLOAD_PATTERNS = [/^\/customers\/\d+\/photo$/]
 const UPLOAD_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/x-icon', 'image/vnd.microsoft.icon']
 const MAX_UPLOAD_BYTES = 3 * 1024 * 1024
 
@@ -92,7 +96,7 @@ export async function handleRemoteRequest<T = unknown>(req: RemoteRequestPayload
  * `fields`).
  */
 export async function handleRemoteUpload<T = unknown>(req: RemoteUploadPayload): Promise<RemoteResponse<T>> {
-  if (!UPLOAD_PATHS.includes(req.path)) {
+  if (!UPLOAD_PATHS.includes(req.path) && !UPLOAD_PATTERNS.some((re) => re.test(req.path))) {
     log.warn('Blocked upload to disallowed path', { path: req.path })
     return { ok: false, status: 400, message: 'This upload is not permitted.' }
   }
